@@ -47,8 +47,15 @@ class MessageViewerAppVersionTwo:
         self.sender_listbox.pack(fill="y", pady=10)
         self.sender_listbox.bind("<<ListboxSelect>>", self.display_sender_messages)
 
+        self.channel_listbox = tk.Listbox(self.sidebar_frame, bg="#F0F0F0")
+        self.channel_listbox.pack(fill=tk.BOTH, expand=True)
+
+        # Bind the listbox selection event
+        self.channel_listbox.bind('<<ListboxSelect>>', self.display_channel_messages)
+
         #save a global variable of the selected_sender
         self.selected_sender = 0
+        self.selected_channel = 0
 
         # Load messages and display senders in the sidebar
         self.messages = self.load_messages()
@@ -57,6 +64,9 @@ class MessageViewerAppVersionTwo:
 
             self.senders = sorted(self.messages['Sender'].unique())  # Get unique senders
             self.display_senders(self.senders)
+
+            self.channels = self.messages['Channel'].dropna().unique()  # Get unique channels
+            self.display_channels(self.channels)
 
         #store images to avoid garabge collection
         self.message_pane.images = []
@@ -85,17 +95,33 @@ class MessageViewerAppVersionTwo:
         for sender in senders:
             self.sender_listbox.insert(tk.END, sender)
 
+    def display_channels(self, channels):
+        """Displays the list of channels in the sidebar."""
+        self.channel_listbox.delete(0, tk.END)
+        for channel in channels:
+            self.channel_listbox.insert(tk.END, channel)
+
     def display_sender_messages(self, event):
         """Displays messages from the selected sender."""
         selected_index = self.sender_listbox.curselection()
 
         if selected_index:
+            # Directly get the sender without needing a second click
             self.selected_sender = self.sender_listbox.get(selected_index)
+            sender_messages = self.messages[self.messages['Sender'] == self.selected_sender]
+            self.display_messages(sender_messages, False)
 
-        sender_messages = self.messages[self.messages['Sender'] == self.selected_sender]
-        self.display_messages(sender_messages)
+    def display_channel_messages(self, event):
+        """Displays messages from the selected channel."""
+        selected_index = self.channel_listbox.curselection()
 
-    def display_messages(self, df):
+        if selected_index:
+            # Directly get the channel without needing a second click
+            self.selected_channel = self.channel_listbox.get(selected_index)
+            channel_messages = self.messages[self.messages['Channel'] == self.selected_channel]
+            self.display_messages(channel_messages, True)
+
+    def display_messages(self, df, isFromChannel):
         """Displays messages and images in the message pane."""
         self.message_pane.config(state=tk.NORMAL)
         self.message_pane.delete(1.0, tk.END)  # Clear existing messages
@@ -103,20 +129,31 @@ class MessageViewerAppVersionTwo:
         for _, row in df.iterrows():
             message = row['Message']
             timestamp = row['Timestamp']
-            image_path = row.get('Media')  # Assuming there's an 'Image' column
+            image_path = row.get('Media')  # Assuming there's a 'Media' column
+            sender = row['Sender']
 
-            # Display the text message
-            display_text = f"{message}\n"
-            time_text = f"{timestamp}\n"
-            self.message_pane.insert(tk.END, display_text, "message")
-            self.message_pane.insert(tk.END, time_text, "timestamp")
-            
-            # Ensure image_path is a valid string and not NaN or None
+            # Format message display with clear visual separation
+            display_text = f"{sender}: {message}\n"  # Message with sender
+            time_text = f"{timestamp}\n"  # Timestamp
+
+            # Insert formatted text with different styles
+            self.message_pane.insert(tk.END, display_text, "message")  # Message with sender
+            self.message_pane.insert(tk.END, time_text, "timestamp")  # Timestamp
+
+            # Add some space between messages for better readability
+            self.message_pane.insert(tk.END, "\n")
+
+            # Ensure image_path is valid and exists
             if pd.notna(image_path) and isinstance(image_path, str) and os.path.exists(image_path):
                 self.display_image(image_path)
 
-        self.message_pane.tag_configure("message", font=("Arial", 12), foreground="#333333")
+        # Configure styles for text display
+        self.message_pane.tag_configure("message", font=("Arial", 12, "bold"), foreground="#333333")
         self.message_pane.tag_configure("timestamp", font=("Arial", 10), foreground="#888888")
+
+        if isFromChannel:
+            self.message_pane.tag_configure("sender", font=("Arial", 10), foreground="#888888")
+
         self.message_pane.config(state=tk.DISABLED)
 
     def display_image(self, image_path):
@@ -153,9 +190,18 @@ class MessageViewerAppVersionTwo:
         new_messages = self.load_messages()
         if not new_messages.equals(self.messages):  # Check if new messages have been added
             self.messages = new_messages
-            self.senders = sorted(self.messages['Sender'].unique())  # Get unique senders
+
+            self.senders = self.messages['Sender'].unique() # Get unique senders
             self.display_senders(self.senders)  # Update sender list
+
+            self.channels = self.messages['Channel'].dropna().unique()  # Get unique senders
+            self.display_channels(self.channels)  # Update sender list
+
             self.display_sender_messages(None)  #show the new messages
+            self.display_channel_messages(None)  #show the new messages
+
+            print("updating messages")
+
 
 # Running the app
 if __name__ == "__main__":

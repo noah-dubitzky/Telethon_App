@@ -25,44 +25,49 @@ excel_file = 'conversations_with_media.xlsx'
 client = TelegramClient('session_name', api_id, api_hash)
 
 
-def save_message_and_update_gui(sender_name, sender_phone, message, gui, media_path=None):
+def save_message_and_update_gui(sender_name, sender_phone, message, gui, media_path=None, channel_name=None):
     """
     Saves the incoming message, updates the Excel file, and refreshes the GUI.
     """
+    from datetime import datetime
+    import pandas as pd
+    import os
 
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     # If the file doesn't exist, create it with a header
     if not os.path.exists(excel_file):
-        df = pd.DataFrame(columns=['Timestamp', 'Sender', 'Phone', 'Message', 'Media'])
+        df = pd.DataFrame(columns=['Timestamp', 'Sender', 'Phone', 'Message', 'Media', 'Channel'])
     else:
         # Load existing Excel file
-        df = pd.read_excel(excel_file)
+        try:
+            df = pd.read_excel(excel_file, engine='openpyxl')
+        except Exception as e:
+            print(f"Failed to load Excel file: {e}")
+            return  # Exit if loading the Excel file fails
 
-    message = message if message and message.message.strip() else " "
+    message = message.strip() if message else " "
 
     # Append the new message to the DataFrame
-    new_message = pd.DataFrame([[timestamp, sender_name, sender_phone, message, media_path]], columns=['Timestamp', 'Sender', 'Phone', 'Message', 'Media'])
+    new_message = pd.DataFrame([[timestamp, sender_name, sender_phone, message, media_path, channel_name]], 
+                                columns=['Timestamp', 'Sender', 'Phone', 'Message', 'Media', 'Channel'])
     df = pd.concat([df, new_message], ignore_index=True)
 
-    # Step 4: Save the DataFrame back to the Excel file
+    # Save the DataFrame back to the Excel file
     try:
-        writer = pd.ExcelWriter(excel_file, engine='openpyxl')
-        df.to_excel(writer, index=False)
-        writer.close()
+        with pd.ExcelWriter(excel_file, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
         print("Message saved to Excel file.")
     except Exception as e:
         print(f"Failed to save Excel file: {e}")
         return  # Exit if saving the Excel file fails
-    
-    time.sleep(2)  # Wait for 2 seconds
 
-    # Step 5: After saving, update the GUI with the new message
+    # Update the GUI without blocking
     try:
-        gui.update_messages()  # Assuming the GUI has an update_messages method
-        print("GUI updated successfully.")
+        gui.root.after(2000, gui.update_messages)  # Schedule GUI update after 2 seconds
+        print("sucessfully updated gui")
     except Exception as e:
-        print(f"Failed to update the GUI: {e}")
+        print("failed to update gui:{e}")
 
 async def download_media(event):
     """
@@ -80,12 +85,16 @@ async def handler(event):
     sender_name = sender.username or sender.first_name or "Unknown"
     sender_phone = sender.phone if sender.phone else "Unknown"  # Get the phone number if available
     message = event.raw_text
+    channel_name = None
 
     # Check if the message has media, and download it
     media_path = await download_media(event)
 
+    if event.is_channel:  # Check if the message is from a channel
+        channel_name = event.chat.title  # Get channel name
+
     # Save the message and media file path (if any)
-    save_message_and_update_gui(sender_name, sender_phone, message, app, media_path)
+    save_message_and_update_gui(sender_name, sender_phone, message, app, media_path, channel_name)
 
 async def main():
     # Start the client
