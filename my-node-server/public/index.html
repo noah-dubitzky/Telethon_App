@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time HTTP Request Listener</title>
+</head>
+<body>
+    <h1>HTTP Request Listener</h1>
+    <p>Last received message will be displayed below in real-time:</p>
+    <div id="message">
+        <pre>No messages received yet.</pre>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        // Listen for 'updateMessage' events from the server
+        socket.on('updateMessage', (data) => {
+            document.getElementById('message').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        });
+    </script>
+</body>
+</html>
