@@ -6,8 +6,6 @@ import asyncio
 import threading
 import tkinter as tk
 import time
-from gui import MessageViewerApp  # Import the GUI class
-from gui_version_2 import MessageViewerAppVersionTwo
 
 # Replace these with your own values
 api_id = 20349481
@@ -25,9 +23,9 @@ excel_file = 'conversations_with_media.xlsx'
 client = TelegramClient('session_name', api_id, api_hash)
 
 
-def save_message_and_update_gui(sender_name, sender_phone, message, gui, media_path=None, channel_name=None):
+def save_message(sender_name, sender_phone, message, media_path=None, channel_name=None):
     """
-    Saves the incoming message, updates the Excel file, and refreshes the GUI.
+    Saves the incoming message and updates the Excel file
     """
     from datetime import datetime
     import pandas as pd
@@ -62,13 +60,6 @@ def save_message_and_update_gui(sender_name, sender_phone, message, gui, media_p
         print(f"Failed to save Excel file: {e}")
         return  # Exit if saving the Excel file fails
 
-    # Update the GUI without blocking
-    try:
-        gui.root.after(2000, gui.update_messages)  # Schedule GUI update after 2 seconds
-        print("sucessfully updated gui")
-    except Exception as e:
-        print("failed to update gui:{e}")
-
 async def download_media(event):
     """
     Downloads media from the event (if any) and returns the file path.
@@ -94,7 +85,7 @@ async def handler(event):
         channel_name = event.chat.title  # Get channel name
 
     # Save the message and media file path (if any)
-    save_message_and_update_gui(sender_name, sender_phone, message, app, media_path, channel_name)
+    save_message(sender_name, sender_phone, message, media_path, channel_name)
 
 async def main():
     # Start the client
@@ -108,17 +99,8 @@ def run_telegram_client():
     asyncio.set_event_loop(loop)
     loop.run_until_complete(main())
 
-# Start the GUI
-def run_gui():
-    global app  # Global variable to access the app from the handler
-    root = tk.Tk()
-    app = MessageViewerAppVersionTwo(root)
-    root.mainloop()
-
 if __name__ == '__main__':
     # Create a thread for the Telegram client
     telegram_thread = threading.Thread(target=run_telegram_client, daemon=True)
     telegram_thread.start()
 
-    # Run the GUI in the main thread
-    run_gui()
