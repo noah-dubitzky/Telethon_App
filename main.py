@@ -6,6 +6,11 @@ import asyncio
 import threading
 import tkinter as tk
 import time
+import Requests
+from datetime import datetime
+import pandas as pd
+import os
+
 
 # Replace these with your own values
 api_id = 20349481
@@ -22,17 +27,15 @@ excel_file = 'conversations_with_media.xlsx'
 # Create the client and connect
 client = TelegramClient('session_name', api_id, api_hash)
 
+def config_message(message):
 
-def save_message(sender_name, sender_phone, message, media_path=None, channel_name=None):
+    message = message.strip() if message else " "
+
+
+def save_message(message):
     """
     Saves the incoming message and updates the Excel file
     """
-    from datetime import datetime
-    import pandas as pd
-    import os
-
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
     # If the file doesn't exist, create it with a header
     if not os.path.exists(excel_file):
         df = pd.DataFrame(columns=['Timestamp', 'Sender', 'Phone', 'Message', 'Media', 'Channel'])
@@ -44,10 +47,8 @@ def save_message(sender_name, sender_phone, message, media_path=None, channel_na
             print(f"Failed to load Excel file: {e}")
             return  # Exit if loading the Excel file fails
 
-    message = message.strip() if message else " "
-
     # Append the new message to the DataFrame
-    new_message = pd.DataFrame([[timestamp, sender_name, sender_phone, message, media_path, channel_name]], 
+    new_message = pd.DataFrame([[message.timestamp, message.sender_name, message.sender_phone, message.text, message.media_path, message.channel_name]], 
                                 columns=['Timestamp', 'Sender', 'Phone', 'Message', 'Media', 'Channel'])
     df = pd.concat([df, new_message], ignore_index=True)
 
@@ -72,20 +73,37 @@ async def download_media(event):
 # Listen for incoming messages
 @client.on(events.NewMessage)
 async def handler(event):
+
     sender = await event.get_sender()
     sender_name = sender.username or sender.first_name or "Unknown"
     sender_phone = sender.phone if sender.phone else "Unknown"  # Get the phone number if available
     message = event.raw_text
     channel_name = None
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     # Check if the message has media, and download it
     media_path = await download_media(event)
 
-    if event.is_channel:  # Check if the message is from a channel
-        channel_name = event.chat.title  # Get channel name
+    if event.is_channel or event.is_group:  # Check if the message is from a channel
+        channel_name = event.chat.title  # Get channel or group name
 
-    # Save the message and media file path (if any)
-    save_message(sender_name, sender_phone, message, media_path, channel_name)
+    message = {
+        'sender_name': sender_name,
+        'timestamp': timestamp,
+        'sender_phone': sender_phone,
+        'text': message,
+        'media_path': media_path,
+        'channel_name': channel_name 
+    }
+
+    #prepare the message of saving to excel file
+    config_message(message)
+
+    #save the message to the excel file
+    save_message(message)
+
+    # Send the object to the server with http
+    Requests.send_message(message)
 
 async def main():
     # Start the client
