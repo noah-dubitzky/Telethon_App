@@ -11,8 +11,12 @@ def Send_Message(message):
     print("Status Code:", response.status_code)
     print("Response Text:", response.text)
 
-    #determine_file_type(message.media_path)
+    file_type = determine_file_type(message['media_path'])
     #determin if the file path stores a video or image, and then call the necessary function to send it
+    if file_type == "Image":
+        Send_Image(message['media_path'])
+    elif file_type == "Video":
+        Send_Video(message['media_path'])
 
 def Send_Image(media_path):
 
@@ -45,6 +49,9 @@ def determine_file_type(file_path):
     image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
     video_extensions = {".mp4", ".avi", ".mkv", ".mov", ".flv", ".wmv", ".webm", ".3gp", ".m4v"}
     
+    if len(file_path) == 0:
+        return "No file type"
+
     # Get the file extension
     file_extension = os.path.splitext(file_path)[1].lower()
     
