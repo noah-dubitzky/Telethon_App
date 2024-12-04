@@ -11,13 +11,24 @@
     <div id="message">
         <pre>No messages received yet.</pre>
     </div>
+
+    <img id="image" alt="description of image" width="200" height="200">
+
     <script src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript" src="scripts/jquery-3.0.0.min.js"></script>
     <script>
         const socket = io();
 
         // Listen for 'updateMessage' events from the server
         socket.on('updateMessage', (data) => {
             document.getElementById('message').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        });
+
+        // Listen for 'updateImage' events from the server
+        socket.on('updateImage', (data) => {
+            var myImage = $("#image");
+            myImage.attr('src', JSON.stringify(data, null, 2)); // Update the src attribute JSON.stringify(data, null, 2);
+            alert('change the file path where the images are stored, go to line 34 of uploadHandler.js');
         });
     </script>
 </body>

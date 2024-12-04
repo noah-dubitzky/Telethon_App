@@ -2,8 +2,8 @@ import requests
 import os
 
 message_url = "http://localhost:3000/receive"
-image_url = "http://localhost:3000/image"
-video_url = "http://localhost:3000/video"
+image_url = "http://localhost:3000/upload-image"
+video_url = "http://localhost:3000/upload-video"
 
 def Send_Message(message):
 
@@ -22,14 +22,14 @@ def Send_Image(media_path):
 
      # Open the file and send it as a POST request
     with open(media_path, "rb") as file:
-        files = {"image": file}  # Key should match the field name in multer setup
+        files = {"image": (media_path, file, "image/jpeg")} # Key should match the field name in multer setup
         response = requests.post(image_url, files=files)
 
     # Check the server's response
     if response.status_code == 200:
         print("Image uploaded successfully:", response.text)
     else:
-        print("Failed to upload image:", response.status_code, response.text)
+        print("Failed to upload image with file path:", media_path, response.status_code, response.text)
 
 def Send_Video(media_path):
 

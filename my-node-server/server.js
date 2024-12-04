@@ -2,13 +2,16 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const bodyParser = require("body-parser");
-const path = require('path')
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+const UploadHandler = require('./uploadHandler');
+const uploadHandler = new UploadHandler(); // Instantiate the upload handler
+
 let lastMessage = null;
+let lastImage = null;
 
 // parse requests of content-type: application/json
 app.use(bodyParser.json());
@@ -36,6 +39,32 @@ app.post('/receive', (req, res) => {
     io.emit('updateMessage', lastMessage);
 
     res.send("Message received and broadcasted to the page!");
+});
+
+// Routes for image uploads
+app.post('/upload-image', uploadHandler.getImageUploader().single('image'), (req, res) => {
+    if (req.file) {
+        console.log('Image uploaded:', req.file);
+        res.status(200).send('Image uploaded successfully');
+
+        lastImage = req.file.path; // Update the last message
+
+        // Emit the new message to all connected WebSocket clients
+        io.emit('updateImage', lastImage);
+
+    } else {
+        res.status(400).send('No image uploaded');
+    }
+});
+
+// Routes for video uploads
+app.post('/upload-video', uploadHandler.getVideoUploader().single('video'), (req, res) => {
+    if (req.file) {
+        console.log('Video uploaded:', req.file);
+        res.status(200).send('Video uploaded successfully');
+    } else {
+        res.status(400).send('No video uploaded');
+    }
 });
 
 // Start the server
