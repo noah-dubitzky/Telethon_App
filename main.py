@@ -4,17 +4,21 @@ from telethon import TelegramClient, events
 from datetime import datetime
 import asyncio
 import threading
-import tkinter as tk
+#import tkinter as tk
 import time
-import Requests
+#import Requests
 from datetime import datetime
-import pandas as pd
-import os
+#import pandas as pd
+#import os
 
 # Replace these with your own values
-api_id = 20349481
-api_hash = '2f4e1f6938e13859b0beec42b9a936d7'
-phone = '+13052054965'  # E.g., '+123456789'
+#api_id = 20349481
+#api_hash = '2f4e1f6938e13859b0beec42b9a936d7'
+#phone = '+13052054965'  # E.g., '+123456789'
+
+api_id = 25991850
+api_hash = 'c25af5fa735f66238cea009a2fb81826'
+phone = '+17863274973'
 
 # Folder where media will be saved
 media_folder = 'media_files'
@@ -36,7 +40,7 @@ def save_message(message):
     """
     # If the file doesn't exist, create it with a header
     if not os.path.exists(excel_file):
-        df = pd.DataFrame(columns=['Timestamp', 'Sender', 'Phone', 'Message', 'Media', 'Channel'])
+        df = pd.DataFrame(columns=['Timestamp', 'Sender', 'Sender Id', 'Phone', 'Message', 'Media', 'Channel'])
     else:
         # Load existing Excel file
         try:
@@ -46,8 +50,8 @@ def save_message(message):
             return  # Exit if loading the Excel file fails
 
     # Append the new message to the DataFrame
-    new_message = pd.DataFrame([[message['timestamp'], message['sender_name'], message['sender_phone'], message['text'], message['media_path'], message['channel_name']]], 
-                                columns=['Timestamp', 'Sender', 'Phone', 'Message', 'Media', 'Channel'])
+    new_message = pd.DataFrame([[message['timestamp'], message['sender_name'], message['sender_id'], message['sender_phone'], message['text'], message['media_path'], message['channel_name']]], 
+                                columns=['Timestamp', 'Sender', 'Sender Id', 'Phone', 'Message', 'Media', 'Channel'])
     df = pd.concat([df, new_message], ignore_index=True)
 
     # Save the DataFrame back to the Excel file
@@ -75,6 +79,7 @@ async def handler(event):
     sender = await event.get_sender()
     sender_name = sender.username or sender.first_name or "Unknown"
     sender_phone = sender.phone if sender.phone else "Unknown"  # Get the phone number if available
+    sender_id = sender.id
     message = event.raw_text
     channel_name = None
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -89,6 +94,7 @@ async def handler(event):
         'sender_name': sender_name,
         'timestamp': timestamp,
         'sender_phone': sender_phone,
+        'sender_id': sender_id,
         'text': message,
         'media_path': media_path,
         'channel_name': channel_name 
@@ -101,14 +107,14 @@ async def handler(event):
     save_message(message)
 
     # Send the object to the server with http
-    Requests.Send_Message(message)
+    #Requests.Send_Message(message)
 
 async def main():
     await client.start(phone)
     print("Listening for new messages...")
     await client.run_until_disconnected()
 
-# Run the Telegram client
-if __name__ == '__main__':
-    asyncio.run(main())
+print("connected")
+client.start()
+client.run_until_disconnected()
 
