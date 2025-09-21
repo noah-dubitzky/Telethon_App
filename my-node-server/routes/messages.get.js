@@ -3,6 +3,16 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db'); // import pool
 
+// routes/messages.js
+router.get('/test-db', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT NOW() AS now');
+    res.json({ success: true, server_time: rows[0].now });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Test route (ping)
 router.get('/ping', async (req, res) => {
   try {

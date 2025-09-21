@@ -21,7 +21,22 @@
 
         // Listen for 'updateMessage' events from the server
         socket.on('updateMessage', (data) => {
+            window.alert(JSON.stringify(data));
             document.getElementById('message').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+
+            $.post({
+                url: "/messages",           // relative to your Express server
+                data: JSON.stringify(data),
+                contentType: "application/json",  // tell Express we’re sending JSON
+                success: function (data) {
+                    console.log("✅ POST success:", data);
+                    alert("Message inserted: " + JSON.stringify(data, null, 2));
+                },
+                error: function (xhr) {
+                    console.error("❌ POST failed:", xhr.responseText);
+                    alert("Error: " + xhr.responseText);
+                }
+            });
         });
 
         // Listen for 'updateImage' events from the server

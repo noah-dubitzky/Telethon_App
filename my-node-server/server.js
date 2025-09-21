@@ -31,11 +31,12 @@ app.get('/', function(req, res) {
 // Middleware
 app.use(express.json());
 
-// Import routes
-const messageRoutes = require('./routes/messages');
+const getRoutes = require('./routes/messages.get');
+const postRoutes = require('./routes/messages.post');
 
-// Use routes (prefix them with /messages)
-app.use('/messages', messageRoutes);
+// mount them both under /messages
+app.use('/messages', getRoutes);
+app.use('/messages', postRoutes);
 
 // Handle incoming HTTP POST requests
 app.use(express.json());
