@@ -49,7 +49,7 @@ def determine_file_type(file_path):
     image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
     video_extensions = {".mp4", ".avi", ".mkv", ".mov", ".flv", ".wmv", ".webm", ".3gp", ".m4v"}
     
-    if len(file_path) == 0:
+    if file_path is None:
         return "No file type"
 
     # Get the file extension

@@ -6,19 +6,19 @@ import asyncio
 import threading
 #import tkinter as tk
 import time
-#import Requests
+import Requests
 from datetime import datetime
 #import pandas as pd
 #import os
 
 # Replace these with your own values
-#api_id = 20349481
-#api_hash = '2f4e1f6938e13859b0beec42b9a936d7'
-#phone = '+13052054965'  # E.g., '+123456789'
+api_id = 20623301
+api_hash = '5111d92b18bd9aa6c60d6506dd9d645a'
+phone = '+13052054965'  # E.g., '+123456789'
 
-api_id = 25991850
-api_hash = 'c25af5fa735f66238cea009a2fb81826'
-phone = '+17863274973'
+#api_id = 25991850
+#api_hash = 'c25af5fa735f66238cea009a2fb81826'
+#phone = '+17863274973'
 
 # Folder where media will be saved
 media_folder = 'media_files'
@@ -107,7 +107,7 @@ async def handler(event):
     save_message(message)
 
     # Send the object to the server with http
-    #Requests.Send_Message(message)
+    Requests.Send_Message(message)
 
 async def main():
     await client.start(phone)

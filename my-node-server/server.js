@@ -28,6 +28,15 @@ app.get('/', function(req, res) {
     res.send('hello world');
 });
 
+// Middleware
+app.use(express.json());
+
+// Import routes
+const messageRoutes = require('./routes/messages');
+
+// Use routes (prefix them with /messages)
+app.use('/messages', messageRoutes);
+
 // Handle incoming HTTP POST requests
 app.use(express.json());
 
