@@ -21,8 +21,8 @@ phone = '+13052054965'  # E.g., '+123456789'
 #phone = '+17863274973'
 
 # Folder where media will be saved
-media_folder = 'media_files'
-os.makedirs(media_folder, exist_ok=True)
+image_folder = 'my-node-server/public/uploads/images'
+video_folder = 'my-node-server/public/uploads/videos'
 
 # Excel file where messages will be saved
 excel_file = 'conversations_with_media.xlsx'
@@ -68,9 +68,22 @@ async def download_media(event):
     Downloads media from the event (if any) and returns the file path.
     """
     if event.media:
-        file_path = await event.download_media(file=media_folder)
+        # Check mime type if available
+        if hasattr(event.media, 'document') and event.media.document.mime_type:
+            mime_type = event.media.document.mime_type
+            if mime_type.startswith("image/"):
+                file_path = await event.download_media(file=image_folder)
+            elif mime_type.startswith("video/"):
+                file_path = await event.download_media(file=video_folder)
+            else:
+                # fallback: still save to images by default
+                file_path = await event.download_media(file=image_folder)
+        else:
+            # If mime_type not available, just drop into images
+            file_path = await event.download_media(file=image_folder)
         return file_path
     return None
+
 
 # Listen for incoming messages
 @client.on(events.NewMessage)

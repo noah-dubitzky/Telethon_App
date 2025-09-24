@@ -13,6 +13,7 @@
     </div>
 
     <img id="image" alt="description of image" width="200" height="200">
+    <video id="video" style="max-width:480px; display:none;" controls></video>
 
     <script src="/socket.io/socket.io.js"></script>
     <script type="text/javascript" src="scripts/jquery-3.0.0.min.js"></script>
@@ -21,30 +22,32 @@
 
         // Listen for 'updateMessage' events from the server
         socket.on('updateMessage', (data) => {
+
             window.alert(JSON.stringify(data));
-            document.getElementById('message').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            document.getElementById('message').innerHTML = '<pre>' + data.text + '</pre>';
 
-            $.post({
-                url: "/messages",           // relative to your Express server
-                data: JSON.stringify(data),
-                contentType: "application/json",  // tell Express we’re sending JSON
-                success: function (data) {
-                    console.log("✅ POST success:", data);
-                    alert("Message inserted: " + JSON.stringify(data, null, 2));
-                },
-                error: function (xhr) {
-                    console.error("❌ POST failed:", xhr.responseText);
-                    alert("Error: " + xhr.responseText);
+            if (data.media_path) {
+                // remove leading "my-node-server/public" if it exists
+                const cleanedPath = data.media_path.replace(/^my-node-server[\/\\]public[\/\\]?/, "");
+
+                // If it's an image, update <img>
+                if (/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(cleanedPath)) {
+                    $("#image").attr("src", "/" + cleanedPath).show();
+                }else if (/\.(mp4|webm|ogg|mov)$/i.test(cleanedPath)) {
+                    $("#video").attr("src", "/" + cleanedPath).show();
                 }
-            });
+            }
+
         });
 
-        // Listen for 'updateImage' events from the server
-        socket.on('updateImage', (data) => {
-            var myImage = $("#image");
-            myImage.attr('src', JSON.stringify(data, null, 2)); // Update the src attribute JSON.stringify(data, null, 2);
-            alert('change the file path where the images are stored, go to line 34 of uploadHandler.js');
+        $.get("/messages/senders", function (data) {
+          console.log("✅ Success:", data);
+          console.log(JSON.stringify(data, null, 2));
+        }).fail(function (xhr) {
+          console.error("❌ Error:", xhr.responseText);
+          alert("Error: " + xhr.responseText);
         });
+
     </script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 // routes/messages.post.js
 const express = require('express');
 const router = express.Router();
-const pool = require('../db');
+const pool = require('../public/scripts/db');
 
 // POST /messages
 router.post('/', async (req, res) => {

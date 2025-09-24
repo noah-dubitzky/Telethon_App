@@ -7,11 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const UploadHandler = require('./uploadHandler');
-const uploadHandler = new UploadHandler(); // Instantiate the upload handler
-
 let lastMessage = null;
-let lastImage = null;
 
 // parse requests of content-type: application/json
 app.use(bodyParser.json());
@@ -48,33 +44,28 @@ app.post('/receive', (req, res) => {
     // Emit the new message to all connected WebSocket clients
     io.emit('updateMessage', lastMessage);
 
+    // Forward the received message to the internal /messages POST endpoint
+    // (The previous code used a jQuery-style object with app.post which caused
+    //  the TypeError: path.replace is not a function.)
+    fetch('http://localhost:' + PORT + '/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lastMessage)
+    })
+    .then(async (res) => {
+        let bodyText = await res.text().catch(() => null);
+        try {
+            const json = bodyText ? JSON.parse(bodyText) : null;
+            console.log('✅ POST success:', json ?? bodyText ?? `(status ${res.status})`);
+        } catch (e) {
+            console.log('✅ POST success (non-JSON):', bodyText ?? `(status ${res.status})`);
+        }
+    })
+    .catch(err => {
+        console.error('❌ POST failed:', err);
+    });
+
     res.send("Message received and broadcasted to the page!");
-});
-
-// Routes for image uploads
-app.post('/upload-image', uploadHandler.getImageUploader().single('image'), (req, res) => {
-    if (req.file) {
-        console.log('Image uploaded:', req.file);
-        res.status(200).send('Image uploaded successfully');
-
-        lastImage = req.file.path; // Update the last message
-
-        // Emit the new message to all connected WebSocket clients
-        io.emit('updateImage', lastImage);
-
-    } else {
-        res.status(400).send('No image uploaded');
-    }
-});
-
-// Routes for video uploads
-app.post('/upload-video', uploadHandler.getVideoUploader().single('video'), (req, res) => {
-    if (req.file) {
-        console.log('Video uploaded:', req.file);
-        res.status(200).send('Video uploaded successfully');
-    } else {
-        res.status(400).send('No video uploaded');
-    }
 });
 
 // Start the server
