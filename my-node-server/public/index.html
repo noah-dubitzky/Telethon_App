@@ -1,53 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time HTTP Request Listener</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Telegram Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
-<body>
-    <h1>HTTP Request Listener</h1>
-    <p>Last received message will be displayed below in real-time:</p>
-    <div id="message">
-        <pre>No messages received yet.</pre>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+  <!-- Header -->
+  <header class="bg-blue-600 text-white py-4 px-6 flex items-center justify-center shadow-md">
+    <div class="flex items-center space-x-3">
+        <img src="/assets/telesaver.png" alt="App Logo" class="h-14 w-14 rounded-full shadow-md" />
+        <h1 class="text-2xl font-bold">Telesaver Dashboard</h1>
     </div>
+  </header>
 
-    <img id="image" alt="description of image" width="200" height="200">
-    <video id="video" style="max-width:480px; display:none;" controls></video>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script type="text/javascript" src="scripts/jquery-3.0.0.min.js"></script>
-    <script>
-        const socket = io();
+  <!-- User Info -->
+  <section class="text-center mt-8">
+    <h2 class="text-2xl font-semibold text-gray-800">Welcome, <span id="username" class="font-bold">Noah Dubitzky</span></h2>
+  </section>
 
-        // Listen for 'updateMessage' events from the server
-        socket.on('updateMessage', (data) => {
+  <!-- Senders List -->
+  <section class="max-w-2xl w-full mx-auto bg-white rounded-lg shadow-md mt-10 p-6">
+    <h3 class="text-xl font-semibold text-gray-700 mb-4">Messages</h3>
+    <div id="senders-container" class="divide-y divide-gray-200">
+      <p class="text-gray-500">Loading senders...</p>
+    </div>
+  </section>
 
-            window.alert(JSON.stringify(data));
-            document.getElementById('message').innerHTML = '<pre>' + data.text + '</pre>';
-
-            if (data.media_path) {
-                // remove leading "my-node-server/public" if it exists
-                const cleanedPath = data.media_path.replace(/^my-node-server[\/\\]public[\/\\]?/, "");
-
-                // If it's an image, update <img>
-                if (/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(cleanedPath)) {
-                    $("#image").attr("src", "/" + cleanedPath).show();
-                }else if (/\.(mp4|webm|ogg|mov)$/i.test(cleanedPath)) {
-                    $("#video").attr("src", "/" + cleanedPath).show();
-                }
-            }
-
-        });
-
-        $.get("/messages/senders", function (data) {
-          console.log("✅ Success:", data);
-          console.log(JSON.stringify(data, null, 2));
-        }).fail(function (xhr) {
-          console.error("❌ Error:", xhr.responseText);
-          alert("Error: " + xhr.responseText);
-        });
-
-    </script>
+  <script>
+    $(document).ready(function () {
+      $.get("/messages/senders", function (data) {
+        const container = $("#senders-container");
+        container.empty();
+        if (data.length === 0) {
+          container.append("<p class='text-gray-500'>No senders found.</p>");
+        } else {
+          data.forEach(sender => {
+            container.append(
+              `<div class="py-3 px-3 hover:bg-gray-50 hover:pointer transition">
+                 <a href="/messages/sender/${sender.id}" class="flex items-center text-blue-600">
+                   <span class="font-medium">${sender.name || sender.id}</span>
+                   ${sender.phone ? `<span class="ml-2 text-gray-500 text-sm">(${sender.phone})</span>` : ""}
+                 </a>
+               </div>`
+            );
+          });
+        }
+      }).fail(function (xhr) {
+        $("#senders-container").html("<p class='text-red-500'>Failed to load senders: " + xhr.responseText + "</p>");
+      });
+    });
+  </script>
 </body>
 </html>
