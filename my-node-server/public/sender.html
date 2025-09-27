@@ -82,7 +82,7 @@
               : `<span class="text-xs px-2 py-1 bg-blue-50 rounded border border-blue-100 text-blue-700">direct</span>`
             }
           </div>
-          <p class="mt-2 text-gray-800 whitespace-pre-wrap break-words">${msg.message || ""}</p>
+          <p class="mt-2 text-gray-800 whitespace-pre-wrap break-words">${msg.text || ""}</p>
           ${mediaHTML}
         </article>
       `;
@@ -91,26 +91,16 @@
     // --- page logic ---
     $(async function(){
       const senderId = getQueryParam("id");
+      const api = new MessagesAPI(); // our global API helper
+
       if(!senderId){
         $("#messages").html(`<div class="p-6 text-red-500">Missing sender id.</div>`);
         return;
       }
       $("#sender-id").text(senderId);
 
-      // Fetch messages for this sender
-
-      const api = new MessagesAPI();
-
-      // Fetch senders
-      api.getSenders().then(data => console.log('Senders:', data));
-
-      // Fetch messages for sender id=123
-      api.getMessagesBySender(senderId).then(msgs => console.log('Msgs:', msgs));
-
-      /*
-      $.get(`/messages/sender/${senderId}`, function(rows){
-        // Optional: if your API also returns sender info, set name here.
-        // Otherwise we can infer from first row or just show the ID.
+      try {
+        const rows = await api.getMessagesBySender(senderId);
         const senderName = (rows && rows[0] && (rows[0].sender_name || rows[0].sender)) || "";
         $("#sender-name").text(senderName || `ID ${senderId}`);
 
@@ -121,10 +111,10 @@
           return;
         }
         rows.forEach(m => box.append(renderMessage(m)));
-      }).fail(function(xhr){
-        $("#messages").html(`<div class="p-6 text-red-500">Failed to load messages: ${xhr.responseText || xhr.status}</div>`);
-      });
-      */
+      } catch (err) {
+        $("#messages").html(`<div class="p-6 text-red-500">Failed to load messages.</div>`);
+        console.error(err);
+      }
     });
   </script>
 </body>
