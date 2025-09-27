@@ -39,13 +39,13 @@
           container.append("<p class='text-gray-500'>No senders found.</p>");
         } else {
           data.forEach(sender => {
-            container.append(
-              `<div class="py-3 px-3 hover:bg-gray-50 hover:pointer transition">
-                 <a href="/messages/sender/${sender.id}" class="flex items-center text-blue-600">
-                   <span class="font-medium">${sender.name || sender.id}</span>
-                   ${sender.phone ? `<span class="ml-2 text-gray-500 text-sm">(${sender.phone})</span>` : ""}
-                 </a>
-               </div>`
+            $("#senders-container").append(
+              `<div class="py-3 hover:bg-gray-50 transition">
+                <a href="/sender.html?id=${sender.id}" class="flex items-center text-blue-600 hover:underline">
+                  <span class="font-medium">${sender.name || sender.id}</span>
+                  ${sender.phone ? `<span class="ml-2 text-gray-500 text-sm">(${sender.phone})</span>` : ""}
+                </a>
+              </div>`
             );
           });
         }
