@@ -7,6 +7,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="/scripts/messages_api.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
 
@@ -28,6 +30,9 @@
         <p class="text-gray-500 text-sm mt-1">
           Sender ID: <span id="sender-id">—</span>
         </p>
+        <p class="text-gray-500 text-sm mt-1">
+          Sender Phone: <span id="sender-phone">—</span>
+        </p>
       </div>
       <a href="/" class="text-blue-600 hover:underline">← Back to senders</a>
     </div>
@@ -39,6 +44,20 @@
   </main>
 
   <script>
+
+    latest_sent_date = "00-00-0000";
+
+    const socket = io();
+
+    socket.on('updateMessage', (data) => {
+
+      if(data.sender_id == getQueryParam("external_id")) {
+        window.alert("Message Added");
+        updateNewMessages(data);
+      }
+
+    });
+
     // --- helpers ---
     function getQueryParam(key){
       const params = new URLSearchParams(window.location.search);
@@ -57,6 +76,27 @@
       return p.replace(/^my-node-server\/public\//, "/");
     }
 
+    function compareDates(dateStr, compareTo) {
+      // Parse the first date
+      const [month1, day1, year1] = dateStr.split("-").map(Number);
+      const date1 = new Date(year1, month1 - 1, day1);
+
+      // Parse the second date or use today
+      let date2;
+      if (compareTo) {
+        const [month2, day2, year2] = compareTo.split("-").map(Number);
+        date2 = new Date(year2, month2 - 1, day2);
+      } else {
+        const now = new Date();
+        // Normalize "today" to midnight to compare only dates
+        date2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      }
+
+      if (date1.getTime() < date2.getTime()) return -1;
+      if (date1.getTime() > date2.getTime()) return 1;
+      return 0;
+    }
+   
     // --- render one message card ---
     function renderMessage(msg){
       const ts = msg.timestamp ? new Date(msg.timestamp).toLocaleString() : "—";
@@ -64,50 +104,66 @@
 
       // Fixed media width
       const mediaWidth = 280;
-      const fake_text = "Hey man this is just a test message to make it look like there is some real text here."
+
+      date_header = "";
+
+      if(compareDates(msg.sent_at.slice(0,10), latest_sent_date) == 1){
+
+        latest_sent_date = msg.sent_at.slice(0,10);
+        date_header = `<div class="w-full text-center">${latest_sent_date}</div>`;
+
+      }
 
       let mediaHTML = "";
       if (media){
         if (isImage(media)){
-          mediaHTML = `<img src="${media}" alt="media" class="mt-3 rounded-lg border max-h-80 object-contain" style="width:${mediaWidth}px;">`;
+          mediaHTML = `<img src="${media}" alt="media" class="mt-3 max-h-80 object-contain" style="width:${mediaWidth}px;">`;
         } else if (isVideo(media)){
-          mediaHTML = `<video src="${media}" controls class="mt-3 rounded-lg border max-h-96" style="width:${mediaWidth}px;"></video>`;
+          mediaHTML = `<video src="${media}" controls class="mt-3 max-h-96" style="width:${mediaWidth}px;"></video>`;
         } else {
           mediaHTML = `<a href="${media}" target="_blank" class="mt-3 inline-block text-blue-600 hover:underline">Download attachment</a>`;
         }
       }
 
       return `
-        <article class="block ml-auto p-6 border-0" style="width:${mediaWidth}px;">
-          <div class="flex items-end flex-col">
+        ${date_header}
+        <article class="bg-blue-400 rounded-lg p-2 m-3 block ml-auto p-6 border-0" style="width:${mediaWidth}px;">
+          <div class="flex flex-col items-end">
             ${mediaHTML}
-            <div class="flex gap-1 w-full">
-              <p class="inline text-gray-800 whitespace-pre-wrap break-words">${fake_text || ""}
-              <a class="inline-block mt-1 ml-auto text-xs text-gray-400 hover:text-gray-600">
-                ${msg.sent_at.slice(0,10)}
-              </a>
-              </p>
-            </div>
+            <p class="w-full text-gray-800 whitespace-pre-wrap break-words">${msg.text || ""}</p>
+            <a class="self-end text-xs text-gray-900 hover:text-gray-900">${msg.sent_at.slice(11,16)}</a>
           </div>
         </article>
       `;
     }
 
+    function updateNewMessages(msg){
+
+      const box = $("#messages");
+      box.append(renderMessage(msg))
+
+    }
+
     // --- page logic ---
     $(async function(){
       const senderId = getQueryParam("id");
+      const senderPhone = getQueryParam("phone");
+      const external_id = getQueryParam("external_id");
+
       const api = new MessagesAPI(); // our global API helper
 
       if(!senderId){
         $("#messages").html(`<div class="p-6 text-red-500">Missing sender id.</div>`);
         return;
       }
-      $("#sender-id").text(senderId);
+
+      $("#sender-id").text(external_id);
+      $("#sender-phone").text(senderPhone || "—");
 
       try {
         const rows = await api.getMessagesBySender(senderId);
         const senderName = (rows && rows[0] && (rows[0].sender_name || rows[0].sender)) || "";
-        $("#sender-name").text(senderName || `ID ${senderId}`);
+        $("#sender-name").text(senderName);
 
         const box = $("#messages");
         box.empty();
@@ -115,12 +171,14 @@
           box.html(`<div class="p-6 text-gray-500">No messages found for this sender.</div>`);
           return;
         }
+
         rows.forEach(m => box.append(renderMessage(m)));
       } catch (err) {
         $("#messages").html(`<div class="p-6 text-red-500">Failed to load messages.</div>`);
         console.error(err);
       }
     });
+  
   </script>
 </body>
 </html>
