@@ -51,6 +51,8 @@
 
     socket.on('updateMessage', (data) => {
 
+      data.sent_at = data.timestamp;
+
       if(data.sender_id == getQueryParam("external_id")) {
         window.alert("Message Added");
         updateNewMessages(data);
@@ -140,8 +142,17 @@
     function updateNewMessages(msg){
 
       const box = $("#messages");
-      box.append(renderMessage(msg))
 
+      if(compareDates(msg.sent_at.slice(0,10), latest_sent_date) == 1){
+
+        latest_sent_date = msg.sent_at.slice(0,10);
+        date_header = `<div class="w-full text-center">${latest_sent_date}</div>`;
+
+        box.append(date_header);
+
+      }
+
+      box.append(renderMessage(msg))
     }
 
     // --- page logic ---
