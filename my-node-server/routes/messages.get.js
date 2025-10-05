@@ -61,6 +61,28 @@ router.get('/senders', async (_req, res) => {
   }
 });
 
+// ✅ Get sender info by external_sender_id
+router.get('/senders/:externalId', async (req, res) => {
+  try {
+    const externalId = String(req.params.externalId);
+    const [rows] = await pool.query(
+      `SELECT *
+       FROM senders
+       WHERE senders.external_sender_id = ?`,
+      [externalId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Sender not found" });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("❌ Error fetching sender by external ID:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // ✅ 4) All channels
 router.get('/channels', async (_req, res) => {
   try {

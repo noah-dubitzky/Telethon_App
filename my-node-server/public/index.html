@@ -6,6 +6,8 @@
   <title>Telegram Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
   <!-- Header -->
@@ -31,28 +33,78 @@
   </section>
 
   <script>
+
+    sender_ids = [];
+    const socket = io();
+
+    socket.on('updateMessage', (data) => {
+
+      window.alert(JSON.stringify(data));
+
+      if(data.channel_name == null && !sender_ids.includes(data.external_sender_id)) {
+        sender_ids.push(data.external_sender_id);
+
+        UpdateNewSender(data);
+
+        window.alert("new sender added");
+
+      }
+
+    });
+
     $(document).ready(function () {
+
       $.get("/messages/senders", function (data) {
+
         const container = $("#senders-container");
         container.empty();
+
         if (data.length === 0) {
-          container.append("<p class='text-gray-500'>No senders found.</p>");
+          container.append("<p id='no_senders_found' class='text-gray-500'>No senders found.</p>");
         } else {
           data.forEach(sender => {
-            $("#senders-container").append(
-              `<div class="py-3 hover:bg-gray-50 transition">
-                <a href="/sender.html?id=${sender.id}&external_id=${sender.external_sender_id}&phone=${sender.phone}" class="flex items-center text-blue-600 hover:underline">
-                  <span class="font-medium">${sender.name || sender.id}</span>
-                  ${sender.phone ? `<span class="ml-2 text-gray-500 text-sm">(${sender.phone})</span>` : ""}
-                </a>
-              </div>`
-            );
+
+            if(sender.channel_name == null){
+              sender_ids.push(sender.external_sender_id);
+            }
+
+            PrependNewSender(sender);
           });
         }
       }).fail(function (xhr) {
         $("#senders-container").html("<p class='text-red-500'>Failed to load senders: " + xhr.responseText + "</p>");
       });
     });
+  
+    UpdateNewSender = (sender) => {
+
+      $.get("/messages/senders/" + sender.sender_id, function (data) {
+
+        PrependNewSender(data);
+        $("#no_senders_found").remove();
+        
+      }).fail(function (xhr) {
+        console.error("❌ Error:", xhr.responseText);
+        alert("Error: " + xhr.responseText);
+      });
+
+      
+
+    }
+
+    PrependNewSender = (sender) => {
+
+      $("#senders-container").prepend(
+        `<div class="py-3 hover:bg-gray-50 transition">
+          <a href="/sender.html?id=${sender.id}&external_id=${sender.external_sender_id}&phone=${sender.phone}" class="flex items-center text-blue-600 hover:underline">
+            <span class="font-medium">${sender.name}</span>
+            ${sender.phone ? `<span class="ml-2 text-gray-500 text-sm">(${sender.phone})</span>` : ""}
+          </a>
+        </div>`
+      );
+
+    }
+
   </script>
 </body>
 </html>
