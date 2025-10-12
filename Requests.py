@@ -1,9 +1,9 @@
 import requests
 import os
 
-message_url = "http://localhost:3000/receive"
-#image_url = "http://localhost:3000/upload-image"
-#video_url = "http://localhost:3000/upload-video"
+message_url = "http://localhost:80/receive"
+#image_url = "http://localhost:80/upload-image"
+#video_url = "http://localhost:80/upload-video"
 
 def Send_Message(message):
 
