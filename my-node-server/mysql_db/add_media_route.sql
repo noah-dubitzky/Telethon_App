@@ -1,3 +1,5 @@
+-- script is not needed
+
 use messaging;
 
 ALTER TABLE Messages
