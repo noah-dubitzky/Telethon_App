@@ -11,7 +11,7 @@ from datetime import datetime
 #import pandas as pd
 #import os
 
-# Replace these with your own values
+# new hash and id may be needed
 api_id = 20623301
 api_hash = '5111d92b18bd9aa6c60d6506dd9d645a'
 phone = '+13052054965'  # E.g., '+123456789'
