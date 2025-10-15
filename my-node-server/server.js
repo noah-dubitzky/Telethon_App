@@ -43,28 +43,7 @@ app.post('/receive', (req, res) => {
 
     // Emit the new message to all connected WebSocket clients
     io.emit('updateMessage', lastMessage);
-
-    // Forward the received message to the internal /messages POST endpoint
-    // (The previous code used a jQuery-style object with app.post which caused
-    //  the TypeError: path.replace is not a function.)
-    fetch('http://localhost:' + PORT + '/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(lastMessage)
-    })
-    .then(async (res) => {
-        let bodyText = await res.text().catch(() => null);
-        try {
-            const json = bodyText ? JSON.parse(bodyText) : null;
-            console.log('✅ POST success:', json ?? bodyText ?? `(status ${res.status})`);
-        } catch (e) {
-            console.log('✅ POST success (non-JSON):', bodyText ?? `(status ${res.status})`);
-        }
-    })
-    .catch(err => {
-        console.error('❌ POST failed:', err);
-    });
-
+    
     res.send("Message received and broadcasted to the page!");
 });
 

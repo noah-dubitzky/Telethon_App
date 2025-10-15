@@ -119,8 +119,11 @@ async def handler(event):
     #save the message to the excel file
     save_message(message)
 
-    # Send the object to the server with http
-    Requests.Send_Message(message)
+    # Send the object to the io route so the emitter can send it to the page
+    Requests.SendMessageToIOEmitter(message)
+
+    # Send the object with the http post method to the mysql server
+    Requests.UploadMessageThroughHTTP(message)
 
 async def main():
     await client.start(phone)

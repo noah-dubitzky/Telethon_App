@@ -18,17 +18,6 @@ router.post('/', async (req, res) => {
   if (!sender_id) return res.status(400).json({ error: 'sender_id is required' });
   if (!timestamp) return res.status(400).json({ error: 'timestamp is required' });
 
-  let sentAt;
-  if (typeof timestamp === 'number') {
-    sentAt = new Date(timestamp * 1000);
-  } else {
-    sentAt = new Date(timestamp);
-  }
-  if (Number.isNaN(sentAt.getTime())) {
-    return res.status(400).json({ error: 'Invalid timestamp format' });
-  }
-  const sentAtStr = sentAt.toISOString().slice(0, 19).replace('T', ' ');
-
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
