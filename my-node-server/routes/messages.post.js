@@ -18,7 +18,16 @@ router.post('/', async (req, res) => {
   if (!sender_id) return res.status(400).json({ error: 'sender_id is required' });
   if (!timestamp) return res.status(400).json({ error: 'timestamp is required' });
 
+  // example input: "2025-10-18 10:15:53"
+  const timestampRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+
+  if (!timestampRegex.test(timestamp)) {
+    return res.status(400).json({ error: 'Invalid timestamp format' });
+  }
+
+  const sentAtStr = timestamp; // no conversion at all
   const conn = await pool.getConnection();
+  
   try {
     await conn.beginTransaction();
 

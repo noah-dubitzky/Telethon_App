@@ -66,6 +66,19 @@
       return params.get(key);
     }
 
+    function convertToNormalTime(mysqlTimestamp) {
+      // Example input: "2025-10-18 18:15:53"
+      const [datePart, timePart] = mysqlTimestamp.split(' ');
+      let [hours, minutes, seconds] = timePart.split(':').map(Number);
+
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12; // convert 0 -> 12, 13 -> 1, etc.
+
+      // zero-pad minutes/seconds just in case
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${datePart} ${hours}:${pad(minutes)}:${pad(seconds)} ${ampm}`;
+    }
+
     function isImage(path){
       return /\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(path || "");
     }
@@ -101,6 +114,7 @@
    
     // --- render one message card ---
     function renderMessage(msg){
+
       const ts = msg.timestamp ? new Date(msg.timestamp).toLocaleString() : "—";
       const media = msg.media_path ? cleanMediaPath(msg.media_path) : "";
 
@@ -108,6 +122,9 @@
       const mediaWidth = 280;
 
       date_header = "";
+
+      //convert date to 12 hour time
+      var time_sent_12hours = convertToNormalTime(msg.sent_at);
 
       if(compareDates(msg.sent_at.slice(0,10), latest_sent_date) == 1){
 
@@ -133,7 +150,7 @@
           <div class="flex flex-col items-end">
             ${mediaHTML}
             <p class="w-full text-gray-800 whitespace-pre-wrap break-words">${msg.text || ""}</p>
-            <a class="self-end text-xs text-gray-900 hover:text-gray-900">${msg.sent_at.slice(11,16)}</a>
+            <a class="self-end text-xs text-gray-900 hover:text-gray-900">${time_sent_12hours.slice(11,22)}</a>
           </div>
         </article>
       `;
