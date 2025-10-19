@@ -126,9 +126,10 @@ router.get('/sender/:senderId', async (req, res) => {
 });
 
 // ✅ 6) Messages from a certain channel (by channel name, limit 50)
-router.get('/channel/:channelName', async (req, res) => {
+router.get('/channel/:channelId', async (req, res) => {
   try {
-    const channelName = req.params.channelName;
+    const channelId = req.params.channelId;
+
     const [rows] = await pool.query(
       `SELECT
          m.id AS message_id,
@@ -136,6 +137,7 @@ router.get('/channel/:channelName', async (req, res) => {
          s.name AS sender_name,
          s.phone AS sender_phone,
          s.external_sender_id,
+         c.id AS channel_id,
          c.name AS channel_name,
          m.text,
          md.path AS media_path
@@ -143,13 +145,19 @@ router.get('/channel/:channelName', async (req, res) => {
        JOIN senders s        ON m.sender_id = s.id
        JOIN channels c       ON m.channel_id = c.id
        LEFT JOIN media md    ON md.message_id = m.id
-       WHERE c.name = ?
+       WHERE c.id = ?
        ORDER BY m.sent_at DESC, m.id DESC
        LIMIT 50`,
-      [channelName]
+      [channelId]
     );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'No messages found for this channel ID.' });
+    }
+
     res.json(rows);
   } catch (err) {
+    console.error('Error fetching channel messages by ID:', err);
     res.status(500).json({ error: 'Server error', details: err.message });
   }
 });

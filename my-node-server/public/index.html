@@ -35,6 +35,7 @@
   <script>
 
     sender_ids = [];
+    channel_ids = [];
     const socket = io();
 
     socket.on('updateMessage', (data) => {
@@ -54,10 +55,10 @@
 
     $(document).ready(function () {
 
-      $.get("/messages/senders", function (data) {
+      const container = $("#senders-container");
+      container.empty();
 
-        const container = $("#senders-container");
-        container.empty();
+      $.get("/messages/senders", function (data) {
 
         if (data.length === 0) {
           container.append("<p id='no_senders_found' class='text-gray-500'>No senders found.</p>");
@@ -74,6 +75,24 @@
       }).fail(function (xhr) {
         $("#senders-container").html("<p class='text-red-500'>Failed to load senders: " + xhr.responseText + "</p>");
       });
+
+      $.get("/messages/channels", function (data) {
+    
+        if (data.length === 0) {
+          container.append("<p id='no_channels_found' class='text-gray-500'>No senders found.</p>");
+        } else {
+          data.forEach(channel => {
+
+            channel_ids.push(channel.id);
+
+            PrependNewChannel(channel);
+          });
+        }
+      }).fail(function (xhr) {
+        $("#senders-container").html("<p class='text-red-500'>Failed to load channels: " + xhr.responseText + "</p>");
+      });
+
+
     });
   
     UpdateNewSender = (sender) => {
@@ -98,7 +117,19 @@
         `<div class="py-3 hover:bg-gray-50 transition">
           <a href="/sender.html?id=${sender.id}&external_id=${sender.external_sender_id}&phone=${sender.phone}" class="flex items-center text-blue-600 hover:underline">
             <span class="font-medium">${sender.name}</span>
-            ${sender.phone ? `<span class="ml-2 text-gray-500 text-sm">(${sender.phone})</span>` : ""}
+            ${sender.external_sender_id ? `<span class="ml-2 text-gray-500 text-sm">(${sender.external_sender_id})</span>` : ""}
+          </a>
+        </div>`
+      );
+
+    }
+
+    PrependNewChannel = (channel) => {
+
+      $("#senders-container").prepend(
+        `<div class="py-3 hover:bg-gray-50 transition">
+          <a href="/channel.html?id=${channel.id}&name=${(channel.name)}" class="flex items-center text-green-600 hover:underline">
+            <span class="font-medium">${channel.name}</span>      
           </a>
         </div>`
       );
