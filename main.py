@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 from telethon import TelegramClient, events
+from telethon.tl.types import User, Channel, Chat
 from datetime import datetime
 import asyncio
 import threading
@@ -84,34 +85,60 @@ async def download_media(event):
         return file_path
     return None
 
+def _display_name(entity):
+    """Return a human name for Users and title for Channels/Groups."""
+    if isinstance(entity, User):
+        # prefer username; else combine first+last; else Unknown
+        name = entity.username or " ".join(filter(None, [entity.first_name, entity.last_name]))
+        return name or "Unknown"
+    if isinstance(entity, (Channel, Chat)):
+        return getattr(entity, "title", None) or getattr(entity, "username", None) or "Unknown"
+    return "Unknown"
 
 # Listen for incoming messages
 @client.on(events.NewMessage)
 async def handler(event):
 
-    sender = await event.get_sender()
-    sender_name = sender.username or sender.first_name or "Unknown"
-    sender_phone = sender.phone if sender.phone else "Unknown"  # Get the phone number if available
-    sender_id = sender.id
-    message = event.raw_text
-    channel_name = None
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+   # These two cover every case
+    sender = await event.get_sender()   # may be None for channel posts
+    chat   = await event.get_chat()     # Channel/Chat/User depending on context
 
-    # Check if the message has media, and download it
+    # Names
+    sender_name = _display_name(sender) if isinstance(sender, User) else None
+    channel_name = _display_name(chat) if isinstance(chat, (Channel, Chat)) else None
+
+    # If it's a channel post (no real "user" sender), use the channel title as the sender label
+    effective_sender_name = sender_name or channel_name or "Unknown"
+
+    # IDs
+    sender_id = sender.id if isinstance(sender, User) else None
+    channel_id = chat.id if isinstance(chat, (Channel, Chat)) else None
+
+    # Phone only exists for User
+    sender_phone = sender.phone if isinstance(sender, User) and getattr(sender, "phone", None) else "Unknown"
+
+    # Text + timestamp
+    message_text = event.raw_text or ""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Media (your function)
     media_path = await download_media(event)
 
-    if event.is_channel or event.is_group:  # Check if the message is from a channel
-        channel_name = event.chat.title  # Get channel or group name
+    # Flags (optional but handy)
+    is_channel_post = bool(event.is_channel and not event.is_group)
 
     message = {
-        'sender_name': sender_name,
-        'timestamp': timestamp,
-        'sender_phone': sender_phone,
-        'sender_id': sender_id,
-        'text': message,
-        'media_path': media_path,
-        'channel_name': channel_name 
+        "sender_name": effective_sender_name,  # User name or Channel title
+        "sender_phone": sender_phone,
+        "sender_id": sender_id,                # None for channel posts
+        "channel_name": channel_name,          # Title for channel/megagroup; None in private chats
+        "channel_id": channel_id,
+        "is_channel_post": is_channel_post,
+        "text": message_text,
+        "media_path": media_path,
+        "timestamp": timestamp,
     }
+
 
     #prepare the message of saving to excel file
     config_message(message)

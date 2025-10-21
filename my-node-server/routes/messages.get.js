@@ -142,7 +142,7 @@ router.get('/channel/:channelId', async (req, res) => {
          m.text,
          md.path AS media_path
        FROM messages m
-       JOIN senders s        ON m.sender_id = s.id
+       LEFT JOIN senders s        ON m.sender_id = s.id
        JOIN channels c       ON m.channel_id = c.id
        LEFT JOIN media md    ON md.message_id = m.id
        WHERE c.id = ?

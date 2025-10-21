@@ -15,7 +15,7 @@ router.post('/', async (req, res) => {
     channel_name
   } = req.body || {};
 
-  if (!sender_id) return res.status(400).json({ error: 'sender_id is required' });
+  //if (!sender_id) return res.status(400).json({ error: 'sender_id is required' });
   if (!timestamp) return res.status(400).json({ error: 'timestamp is required' });
 
   // example input: "2025-10-18 10:15:53"
@@ -31,18 +31,24 @@ router.post('/', async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // sender
-    await conn.execute(
-      `INSERT INTO senders (external_sender_id, name, phone)
-       VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE
-         name = VALUES(name),
-         phone = VALUES(phone),
-         id = LAST_INSERT_ID(id)`,
-      [String(sender_id), sender_name || null, sender_phone || null]
-    );
-    const [[senderRow]] = await conn.query('SELECT LAST_INSERT_ID() AS id');
-    const senderPk = senderRow.id;
+    let senderPk = null;
+
+    if(sender_id){
+
+      // sender
+      await conn.execute(
+        `INSERT INTO senders (external_sender_id, name, phone)
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          name = VALUES(name),
+          phone = VALUES(phone),
+          id = LAST_INSERT_ID(id)`,
+        [String(sender_id), sender_name || null, sender_phone || null]
+      );
+      const [[senderRow]] = await conn.query('SELECT LAST_INSERT_ID() AS id');
+      senderPk = senderRow.id;
+
+    }
 
     // channel (nullable)
     let channelPk = null;
