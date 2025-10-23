@@ -26,14 +26,8 @@
     <div class="mb-6 flex items-center justify-between">
       <div>
         <h2 class="text-2xl font-semibold text-gray-800">
-          Messages from: <span id="sender-name" class="font-bold">Loading...</span>
+          Messages from: <span id="channel-name" class="font-bold">Loading...</span>
         </h2>
-        <p class="text-gray-500 text-sm mt-1">
-          Sender ID: <span id="sender-id">—</span>
-        </p>
-        <p class="text-gray-500 text-sm mt-1">
-          Sender Phone: <span id="sender-phone">—</span>
-        </p>
       </div>
       <a href="/" class="text-blue-600 hover:underline">← Back to senders</a>
     </div>
@@ -100,6 +94,7 @@
             ${mediaHTML}
             <p class="w-full text-gray-800 whitespace-pre-wrap break-words">${msg.text || ""}</p>
             <a class="self-end text-xs text-gray-900 hover:text-gray-900">${time_sent_12hours.slice(11,22)}</a>
+            <a class="self-end text-xs text-gray-900 hover:text-gray-900">${msg.sender_name}</a>
           </div>
         </article>
       `;
@@ -123,29 +118,27 @@
 
     // --- page logic ---
     $(async function(){
-      const senderId = Helpers.getQueryParam("id");
-      const senderPhone = Helpers.getQueryParam("phone");
-      const external_id = Helpers.getQueryParam("external_id");
+      const channelId = Helpers.getQueryParam("id");
+      const channelName = Helpers.getQueryParam("name");
 
       const api = new MessagesAPI(); // our global API helper
 
-      if(!senderId){
+      if(!channelId){
         $("#messages").html(`<div class="p-6 text-red-500">Missing sender id.</div>`);
         return;
       }
 
-      $("#sender-id").text(external_id);
-      $("#sender-phone").text(senderPhone || "—");
+      $("#channel-name").text(channelName || "—");
 
       try {
-        const rows = await api.getMessagesBySender(senderId);
-        const senderName = (rows && rows[0] && (rows[0].sender_name || rows[0].sender)) || "";
-        $("#sender-name").text(senderName);
+        const rows = await api.getMessagesByChannel(channelId);
+        const channelName = (rows && rows[0] && (rows[0].channel_name || rows[0].channel)) || "";
+        $("#channel-name").text(channelName);
 
         const box = $("#messages");
         box.empty();
         if(!rows || rows.length === 0){
-          box.html(`<div class="p-6 text-gray-500">No messages found for this sender.</div>`);
+          box.html(`<div class="p-6 text-gray-500">No messages found for this channel.</div>`);
           return;
         }
 

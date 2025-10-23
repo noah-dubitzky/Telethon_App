@@ -144,7 +144,7 @@ async def handler(event):
     config_message(message)
 
     #save the message to the excel file
-    save_message(message)
+    #save_message(message)
 
     # Send the object to the io route so the emitter can send it to the page
     Requests.SendMessageToIOEmitter(message)
