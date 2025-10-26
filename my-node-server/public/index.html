@@ -40,8 +40,6 @@
 
     socket.on('updateMessage', (data) => {
 
-      window.alert(JSON.stringify(data));
-
       if(data.channel_name == null && !sender_ids.includes(data.external_sender_id)) {
         sender_ids.push(data.external_sender_id);
 

@@ -121,6 +121,8 @@ async def handler(event):
     message_text = event.raw_text or ""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    print(timestamp, effective_sender_name, message_text)
+
     # Media (your function)
     media_path = await download_media(event)
 

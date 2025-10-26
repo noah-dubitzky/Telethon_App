@@ -66,6 +66,10 @@
 
       date_header = "";
 
+      if(msg.sender_name == null){
+        msg.sender_name = "";
+      }
+
       //convert date to 12 hour time
       var time_sent_12hours = Helpers.convertToNormalTime(msg.sent_at);
 
