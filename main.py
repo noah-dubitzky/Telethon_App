@@ -3,6 +3,7 @@ import pandas as pd
 from telethon import TelegramClient, events
 from telethon.tl.types import User, Channel, Chat
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import asyncio
 import threading
 #import tkinter as tk
@@ -119,7 +120,9 @@ async def handler(event):
 
     # Text + timestamp
     message_text = event.raw_text or ""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    local_time = event.date.astimezone(ZoneInfo("America/New_York"))
+    timestamp = local_time.strftime("%Y-%m-%d %H:%M:%S")
 
     print(timestamp, effective_sender_name, message_text)
 
