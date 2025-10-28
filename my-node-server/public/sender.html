@@ -9,6 +9,8 @@
   <script src="/scripts/messages_api.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/scripts/message_handling_helpers.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="/scripts/Export_As_PDF_Helpers.js"></script>
 
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
@@ -36,6 +38,7 @@
         </p>
       </div>
       <a href="/" class="text-blue-600 hover:underline">← Back to senders</a>
+      <a id="download" class="text-blue-600 hover:underline">Download Conversation</a>
     </div>
 
     <!-- Messages list -->
@@ -58,6 +61,12 @@
         window.alert("Message Added");
         updateNewMessages(data);
       }
+
+    });
+
+    $('#download').on('click', function() {
+
+      exportChatAsPDF();
 
     });
 
@@ -95,11 +104,11 @@
 
       return `
         ${date_header}
-        <article class="bg-blue-400 rounded-lg p-2 m-3 block ml-auto p-6 border-0" style="width:${mediaWidth}px;">
-          <div class="flex flex-col items-end">
+        <article class="message bg-blue-400 rounded-lg p-2 m-3 block ml-auto p-6 border-0" style="width:${mediaWidth}px;">
+          <div class="media flex flex-col items-end">
             ${mediaHTML}
-            <p class="w-full text-gray-800 whitespace-pre-wrap break-words">${msg.text || ""}</p>
-            <a class="self-end text-xs text-gray-900 hover:text-gray-900">${time_sent_12hours.slice(11,22)}</a>
+            <p class="text w-full text-gray-800 whitespace-pre-wrap break-words">${msg.text || ""}</p>
+            <a class="time self-end text-xs text-gray-900 hover:text-gray-900">${time_sent_12hours.slice(11,22)}</a>
           </div>
         </article>
       `;
