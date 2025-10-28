@@ -57,8 +57,6 @@
       container.empty();
 
       $.get("/messages/entities", function (data) {
-
-        window.alert("loaded senders and channels");
     
         if (data.length === 0) {
           container.append("<p id='no_sender_found' class='text-gray-500'>No senders or channles found.</p>");
