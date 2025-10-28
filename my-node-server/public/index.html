@@ -56,38 +56,31 @@
       const container = $("#senders-container");
       container.empty();
 
-      $.get("/messages/senders", function (data) {
+      $.get("/messages/entities", function (data) {
 
-        if (data.length === 0) {
-          container.append("<p id='no_senders_found' class='text-gray-500'>No senders found.</p>");
-        } else {
-          data.forEach(sender => {
-
-            if(sender.channel_name == null){
-              sender_ids.push(sender.external_sender_id);
-            }
-
-            PrependNewSender(sender);
-          });
-        }
-      }).fail(function (xhr) {
-        $("#senders-container").html("<p class='text-red-500'>Failed to load senders: " + xhr.responseText + "</p>");
-      });
-
-      $.get("/messages/channels", function (data) {
+        window.alert("loaded senders and channels");
     
         if (data.length === 0) {
-          container.append("<p id='no_channels_found' class='text-gray-500'>No senders found.</p>");
+          container.append("<p id='no_sender_found' class='text-gray-500'>No senders or channles found.</p>");
         } else {
-          data.forEach(channel => {
+          data.forEach(entity => {
 
-            channel_ids.push(channel.id);
+            if(entity.entity_type === "channel"){
 
-            PrependNewChannel(channel);
+              channel_ids.push(entity.id);
+
+              PrependNewChannel(entity);
+
+            }else{
+
+              sender_ids.push(entity.external_sender_id);
+              
+              PrependNewSender(entity);
+            }
           });
         }
       }).fail(function (xhr) {
-        $("#senders-container").html("<p class='text-red-500'>Failed to load channels: " + xhr.responseText + "</p>");
+        $("#senders-container").html("<p class='text-red-500'>Failed to load channels and senders: " + xhr.responseText + "</p>");
       });
 
 

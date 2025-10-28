@@ -162,4 +162,42 @@ router.get('/channel/:channelId', async (req, res) => {
   }
 });
 
+router.get('/entities', async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        'channel' AS entity_type,
+        c.id AS id,
+        c.name AS name,
+        NULL AS phone,
+        NULL AS external_sender_id,
+        MAX(m.sent_at) AS latest_message_time
+      FROM channels c
+      LEFT JOIN messages m ON m.channel_id = c.id
+      GROUP BY c.id
+
+      UNION ALL
+
+      SELECT 
+        'sender' AS entity_type,
+        s.id AS id,
+        s.name AS name,
+        s.phone AS phone,
+        s.external_sender_id AS external_sender_id,
+        MAX(m.sent_at) AS latest_message_time
+      FROM senders s
+      LEFT JOIN messages m ON m.sender_id = s.id
+      GROUP BY s.id
+
+      ORDER BY latest_message_time ASC;
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+});
+
+
 module.exports = router;
