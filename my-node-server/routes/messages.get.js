@@ -146,7 +146,7 @@ router.get('/channel/:channelId', async (req, res) => {
        JOIN channels c       ON m.channel_id = c.id
        LEFT JOIN media md    ON md.message_id = m.id
        WHERE c.id = ?
-       ORDER BY m.sent_at DESC, m.id DESC
+       ORDER BY m.sent_at ASC, m.id ASC
        LIMIT 50`,
       [channelId]
     );
