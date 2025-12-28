@@ -29,7 +29,9 @@ app.use(express.json());
 
 const getRoutes = require('./routes/messages.get');
 const postRoutes = require('./routes/messages.post');
+const filterCheckRoute = require('./routes/filters.check');
 
+app.use(filterCheckRoute);
 // mount them both under /messages
 app.use('/messages', getRoutes);
 app.use('/messages', postRoutes);

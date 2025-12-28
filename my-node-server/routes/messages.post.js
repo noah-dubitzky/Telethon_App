@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../public/scripts/db');
+const { isMessageAllowed } = require('../public/utils/filterRules');
 
 // POST /messages
 router.post('/', async (req, res) => {
@@ -14,6 +15,15 @@ router.post('/', async (req, res) => {
     media_path,
     channel_name
   } = req.body || {};
+
+  const allowed = await isMessageAllowed({
+    external_sender_id: sender_id,
+    channel_key: channel_name
+  });
+
+  if (!allowed) {
+    return res.status(204).end(); // skip silently
+  }
 
   //if (!sender_id) return res.status(400).json({ error: 'sender_id is required' });
   if (!timestamp) return res.status(400).json({ error: 'timestamp is required' });

@@ -10,6 +10,7 @@ import threading
 import time
 import Requests
 from datetime import datetime
+from filter_client import should_save_message
 #import pandas as pd
 #import os
 
@@ -123,6 +124,11 @@ async def handler(event):
     
     local_time = event.date.astimezone(ZoneInfo("America/New_York"))
     timestamp = local_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    # --- FILTER CHECK (must happen BEFORE download_media) ---
+    if not should_save_message(sender_id, channel_name):
+        print("channel or sender has been blocked by filter rules, skipping message.")
+        return  # 🚫 skip: no media download, no POST
 
     print(timestamp, effective_sender_name, message_text)
 
