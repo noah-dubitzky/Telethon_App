@@ -1,7 +1,7 @@
 const pool = require('../scripts/db'); // MySQL connection pool (public/scripts/db.js)
 
-const DEFAULT_ALLOW_SENDERS = true;
-const DEFAULT_ALLOW_CHANNELS = true;
+const DEFAULT_ALLOW_SENDERS = false;
+const DEFAULT_ALLOW_CHANNELS = false;
 
 /**
  * Decide whether a message should be saved.
