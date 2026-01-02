@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Telesaver — Messages</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="/scripts/messages_api.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/scripts/message_handling_helpers.js"></script>
+
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+  <!-- Top bar (centered logo + title) -->
+  <header class="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white py-4 px-6 flex items-center justify-center shadow-md">
+    <div class="flex items-center space-x-3">
+      <img src="/assets/telesaver.png" alt="App Logo" class="h-10 w-10 rounded-full shadow-md" />
+      <h1 class="text-2xl font-bold">Telesaver — Messages</h1>
+    </div>
+  </header>
+
+  <!-- Content wrapper -->
+  <main class="max-w-4xl w-full mx-auto px-4 py-8">
+    <div class="mb-6 flex items-center justify-between">
+      <div>
+        <h2 class="text-2xl font-semibold text-gray-800">
+          Messages from: <span id="channel-name" class="font-bold">Loading...</span>
+        </h2>
+      </div>
+      <a href="/" class="text-blue-600 hover:underline">← Back to senders</a>
+    </div>
+
+    <!-- Messages list -->
+    <section id="messages" class="bg-white pb-3 rounded-lg shadow-md">
+      <div class="p-6 text-gray-500">Loading messages…</div>
+    </section>
+  </main>
+
+  <script>
+
+    latest_sent_date = "00-00-0000";
+
+    const socket = io();
+
+    socket.on('updateMessage', (data) => {
+
+      data.sent_at = data.timestamp;
+
+      if(data.sender_id == Helpers.getQueryParam("external_id")) {
+        window.alert("Message Added");
+        updateNewMessages(data);
+      }
+
+    });
+
+    // --- render one message card ---
+    function renderMessage(msg){
+
+      const ts = msg.timestamp ? new Date(msg.timestamp).toLocaleString() : "—";
+      const media = msg.media_path ? Helpers.cleanMediaPath(msg.media_path) : "";
+
+      // Fixed media width
+      const mediaWidth = 280;
+
+      date_header = "";
+
+      if(msg.sender_name == null){
+        msg.sender_name = "";
+      }
+
+      //convert date to 12 hour time
+      var time_sent_12hours = Helpers.convertToNormalTime(msg.sent_at);
+
+      if(Helpers.compareDates(msg.sent_at.slice(0,10), latest_sent_date) == 1){
+
+        latest_sent_date = msg.sent_at.slice(0,10);
+        date_header = `<div class="w-full text-center">${latest_sent_date}</div>`;
+
+      }
+
+      let mediaHTML = "";
+      if (media){
+        if (Helpers.isImage(media)){
+          mediaHTML = `<img src="${media}" alt="media" class="mt-3 max-h-80 object-contain" style="width:${mediaWidth}px;">`;
+        } else if (Helpers.isVideo(media)){
+          mediaHTML = `<video src="${media}" controls class="mt-3 max-h-96" style="width:${mediaWidth}px;"></video>`;
+        } else {
+          mediaHTML = `<a href="${media}" target="_blank" class="mt-3 inline-block text-blue-600 hover:underline">Download attachment</a>`;
+        }
+      }
+
+      return `
+        ${date_header}
+        <article class="bg-blue-400 rounded-lg p-2 m-3 block ml-auto p-6 border-0" style="width:${mediaWidth}px;">
+          <div class="flex flex-col items-end">
+            ${mediaHTML}
+            <p class="w-full text-gray-800 whitespace-pre-wrap break-words">${msg.text || ""}</p>
+            <a class="self-end text-xs text-gray-900 hover:text-gray-900">${time_sent_12hours.slice(11,22)}</a>
+            <a class="self-end text-xs text-gray-900 hover:text-gray-900">${msg.sender_name}</a>
+          </div>
+        </article>
+      `;
+    }
+
+    function updateNewMessages(msg){
+
+      const box = $("#messages");
+
+      if(Helpers.compareDates(msg.sent_at.slice(0,10), latest_sent_date) == 1){
+
+        latest_sent_date = msg.sent_at.slice(0,10);
+        date_header = `<div class="w-full text-center">${latest_sent_date}</div>`;
+
+        box.append(date_header);
+
+      }
+
+      box.append(renderMessage(msg))
+    }
+
+    // --- page logic ---
+    $(async function(){
+      const channelId = Helpers.getQueryParam("id");
+      const channelName = Helpers.getQueryParam("name");
+
+      const api = new MessagesAPI(); // our global API helper
+
+      if(!channelId){
+        $("#messages").html(`<div class="p-6 text-red-500">Missing sender id.</div>`);
+        return;
+      }
+
+      $("#channel-name").text(channelName || "—");
+
+      try {
+        const rows = await api.getMessagesByChannel(channelId);
+        const channelName = (rows && rows[0] && (rows[0].channel_name || rows[0].channel)) || "";
+        $("#channel-name").text(channelName);
+
+        const box = $("#messages");
+        box.empty();
+        if(!rows || rows.length === 0){
+          box.html(`<div class="p-6 text-gray-500">No messages found for this channel.</div>`);
+          return;
+        }
+
+        rows.forEach(m => box.append(renderMessage(m)));
+      } catch (err) {
+        $("#messages").html(`<div class="p-6 text-red-500">Failed to load messages.</div>`);
+        console.error(err);
+      }
+    });
+  
+  </script>
+</body>
+</html>

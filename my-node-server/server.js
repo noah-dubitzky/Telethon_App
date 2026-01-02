@@ -2,7 +2,6 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const bodyParser = require("body-parser");
-const path = require('path')
 
 const app = express();
 const server = http.createServer(app);
@@ -25,6 +24,18 @@ app.get('/', function(req, res) {
     res.send('hello world');
 });
 
+// Middleware
+app.use(express.json());
+
+const getRoutes = require('./routes/messages.get');
+const postRoutes = require('./routes/messages.post');
+const filterCheckRoute = require('./routes/filters.check');
+
+app.use(filterCheckRoute);
+// mount them both under /messages
+app.use('/messages', getRoutes);
+app.use('/messages', postRoutes);
+
 // Handle incoming HTTP POST requests
 app.use(express.json());
 
@@ -34,12 +45,12 @@ app.post('/receive', (req, res) => {
 
     // Emit the new message to all connected WebSocket clients
     io.emit('updateMessage', lastMessage);
-
+    
     res.send("Message received and broadcasted to the page!");
 });
 
 // Start the server
-const PORT = 3000;
+const PORT = 80;
 server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });

@@ -1,22 +1,31 @@
 import os
 import pandas as pd
 from telethon import TelegramClient, events
+from telethon.tl.types import User, Channel, Chat
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import asyncio
 import threading
-import tkinter as tk
+#import tkinter as tk
 import time
-from gui import MessageViewerApp  # Import the GUI class
-from gui_version_2 import MessageViewerAppVersionTwo
+import Requests
+from datetime import datetime
+from filter_client import should_save_message
+#import pandas as pd
+#import os
 
-# Replace these with your own values
-api_id = 20349481
-api_hash = '2f4e1f6938e13859b0beec42b9a936d7'
+# new hash and id may be needed
+api_id = 20623301
+api_hash = '5111d92b18bd9aa6c60d6506dd9d645a'
 phone = '+13052054965'  # E.g., '+123456789'
 
+#api_id = 25991850
+#api_hash = 'c25af5fa735f66238cea009a2fb81826'
+#phone = '+17863274973'
+
 # Folder where media will be saved
-media_folder = 'media_files'
-os.makedirs(media_folder, exist_ok=True)
+image_folder = 'my-node-server/public/uploads/images'
+video_folder = 'my-node-server/public/uploads/videos'
 
 # Excel file where messages will be saved
 excel_file = 'conversations_with_media.xlsx'
@@ -24,20 +33,17 @@ excel_file = 'conversations_with_media.xlsx'
 # Create the client and connect
 client = TelegramClient('session_name', api_id, api_hash)
 
+def config_message(message):
 
-def save_message_and_update_gui(sender_name, sender_phone, message, gui, media_path=None, channel_name=None):
+    message['text']= message['text'].strip() if message['text'] else " "
+
+def save_message(message):
     """
-    Saves the incoming message, updates the Excel file, and refreshes the GUI.
+    Saves the incoming message and updates the Excel file
     """
-    from datetime import datetime
-    import pandas as pd
-    import os
-
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
     # If the file doesn't exist, create it with a header
     if not os.path.exists(excel_file):
-        df = pd.DataFrame(columns=['Timestamp', 'Sender', 'Phone', 'Message', 'Media', 'Channel'])
+        df = pd.DataFrame(columns=['Timestamp', 'Sender', 'Sender Id', 'Phone', 'Message', 'Media', 'Channel'])
     else:
         # Load existing Excel file
         try:
@@ -46,11 +52,9 @@ def save_message_and_update_gui(sender_name, sender_phone, message, gui, media_p
             print(f"Failed to load Excel file: {e}")
             return  # Exit if loading the Excel file fails
 
-    message = message.strip() if message else " "
-
     # Append the new message to the DataFrame
-    new_message = pd.DataFrame([[timestamp, sender_name, sender_phone, message, media_path, channel_name]], 
-                                columns=['Timestamp', 'Sender', 'Phone', 'Message', 'Media', 'Channel'])
+    new_message = pd.DataFrame([[message['timestamp'], message['sender_name'], message['sender_id'], message['sender_phone'], message['text'], message['media_path'], message['channel_name']]], 
+                                columns=['Timestamp', 'Sender', 'Sender Id', 'Phone', 'Message', 'Media', 'Channel'])
     df = pd.concat([df, new_message], ignore_index=True)
 
     # Save the DataFrame back to the Excel file
@@ -62,63 +66,109 @@ def save_message_and_update_gui(sender_name, sender_phone, message, gui, media_p
         print(f"Failed to save Excel file: {e}")
         return  # Exit if saving the Excel file fails
 
-    # Update the GUI without blocking
-    try:
-        gui.root.after(2000, gui.update_messages)  # Schedule GUI update after 2 seconds
-        print("sucessfully updated gui")
-    except Exception as e:
-        print("failed to update gui:{e}")
-
 async def download_media(event):
     """
     Downloads media from the event (if any) and returns the file path.
     """
     if event.media:
-        file_path = await event.download_media(file=media_folder)
+        # Check mime type if available
+        if hasattr(event.media, 'document') and event.media.document.mime_type:
+            mime_type = event.media.document.mime_type
+            if mime_type.startswith("image/"):
+                file_path = await event.download_media(file=image_folder)
+            elif mime_type.startswith("video/"):
+                file_path = await event.download_media(file=video_folder)
+            else:
+                # fallback: still save to images by default
+                file_path = await event.download_media(file=image_folder)
+        else:
+            # If mime_type not available, just drop into images
+            file_path = await event.download_media(file=image_folder)
         return file_path
     return None
+
+def _display_name(entity):
+    """Return a human name for Users and title for Channels/Groups."""
+    if isinstance(entity, User):
+        # prefer username; else combine first+last; else Unknown
+        name = entity.username or " ".join(filter(None, [entity.first_name, entity.last_name]))
+        return name or "Unknown"
+    if isinstance(entity, (Channel, Chat)):
+        return getattr(entity, "title", None) or getattr(entity, "username", None) or "Unknown"
+    return "Unknown"
 
 # Listen for incoming messages
 @client.on(events.NewMessage)
 async def handler(event):
-    sender = await event.get_sender()
-    sender_name = sender.username or sender.first_name or "Unknown"
-    sender_phone = sender.phone if sender.phone else "Unknown"  # Get the phone number if available
-    message = event.raw_text
-    channel_name = None
 
-    # Check if the message has media, and download it
+   # These two cover every case
+    sender = await event.get_sender()   # may be None for channel posts
+    chat   = await event.get_chat()     # Channel/Chat/User depending on context
+
+    # Names
+    sender_name = _display_name(sender) if isinstance(sender, User) else None
+    channel_name = _display_name(chat) if isinstance(chat, (Channel, Chat)) else None
+
+    # If it's a channel post (no real "user" sender), use the channel title as the sender label
+    effective_sender_name = sender_name or channel_name or "Unknown"
+
+    # IDs
+    sender_id = sender.id if isinstance(sender, User) else None
+    channel_id = chat.id if isinstance(chat, (Channel, Chat)) else None
+
+    # Phone only exists for User
+    sender_phone = sender.phone if isinstance(sender, User) and getattr(sender, "phone", None) else "Unknown"
+
+    # Text + timestamp
+    message_text = event.raw_text or ""
+    
+    local_time = event.date.astimezone(ZoneInfo("America/New_York"))
+    timestamp = local_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    # --- FILTER CHECK (must happen BEFORE download_media) ---
+    if not should_save_message(sender_id, channel_name):
+        print("channel or sender has been blocked by filter rules, skipping message.")
+        return  # 🚫 skip: no media download, no POST
+
+    print(timestamp, effective_sender_name, message_text)
+
+    # Media (your function)
     media_path = await download_media(event)
 
-    if event.is_channel:  # Check if the message is from a channel
-        channel_name = event.chat.title  # Get channel name
+    # Flags (optional but handy)
+    is_channel_post = bool(event.is_channel and not event.is_group)
 
-    # Save the message and media file path (if any)
-    save_message_and_update_gui(sender_name, sender_phone, message, app, media_path, channel_name)
+    message = {
+        "sender_name": effective_sender_name,  # User name or Channel title
+        "sender_phone": sender_phone,
+        "sender_id": sender_id,                # None for channel posts
+        "channel_name": channel_name,          # Title for channel/megagroup; None in private chats
+        "channel_id": channel_id,
+        "is_channel_post": is_channel_post,
+        "text": message_text,
+        "media_path": media_path,
+        "timestamp": timestamp,
+    }
+
+
+    #prepare the message of saving to excel file
+    config_message(message)
+
+    #save the message to the excel file
+    save_message(message)
+
+    # Send the object to the io route so the emitter can send it to the page
+    Requests.SendMessageToIOEmitter(message)
+
+    # Send the object with the http post method to the mysql server
+    Requests.UploadMessageThroughHTTP(message)
 
 async def main():
-    # Start the client
     await client.start(phone)
     print("Listening for new messages...")
     await client.run_until_disconnected()
 
-# Create a thread to run the Telegram client
-def run_telegram_client():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(main())
+print("connected")
+client.start()
+client.run_until_disconnected()
 
-# Start the GUI
-def run_gui():
-    global app  # Global variable to access the app from the handler
-    root = tk.Tk()
-    app = MessageViewerAppVersionTwo(root)
-    root.mainloop()
-
-if __name__ == '__main__':
-    # Create a thread for the Telegram client
-    telegram_thread = threading.Thread(target=run_telegram_client, daemon=True)
-    telegram_thread.start()
-
-    # Run the GUI in the main thread
-    run_gui()
