@@ -6,7 +6,7 @@ const pool = mysql.createPool({
   port: 3306,
   user: 'admin',
   password: 'ZYkrux3aezztgWxxUyG4',
-  database: 'messaging',
+  database: 'messaging_personal',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
