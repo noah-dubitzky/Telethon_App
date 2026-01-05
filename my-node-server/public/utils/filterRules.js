@@ -19,6 +19,9 @@ async function isMessageAllowed({ external_sender_id, channel_key }) {
 
       if (channelRows.length) {
         return channelRows[0].mode === 'allow';
+      }else{
+
+        return DEFAULT_ALLOW_CHANNELS;
       }
     }
 
@@ -31,11 +34,14 @@ async function isMessageAllowed({ external_sender_id, channel_key }) {
 
       if (senderRows.length) {
         return senderRows[0].mode === 'allow';
+      }else{
+        
+        return DEFAULT_ALLOW_SENDERS;
       }
     }
 
     // 3️⃣ Defaults
-    return DEFAULT_ALLOW_CHANNELS && DEFAULT_ALLOW_SENDERS;
+    return false;
 
   } catch (err) {
     console.error('[filterRules] failed, allowing message:', err);
