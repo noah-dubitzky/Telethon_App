@@ -7,16 +7,68 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="../scripts/index.js"></script>
 
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
   <!-- Header -->
-  <header class="bg-blue-600 text-white py-4 px-6 flex items-center justify-center shadow-md">
-    <div class="flex items-center space-x-3">
-        <img src="/assets/telesaver.png" alt="App Logo" class="h-14 w-14 rounded-full shadow-md" />
-        <h1 class="text-2xl font-bold">Telesaver Dashboard</h1>
+  <header class="bg-blue-600 text-white py-4 px-6 shadow-md
+               grid grid-cols-[1fr_auto_1fr] items-center">
+
+  <!-- Left spacer (balances right button) -->
+  <div></div>
+
+  <!-- Center group: logo + title -->
+  <div class="flex items-center space-x-3 justify-self-center">
+    <img
+      src="/assets/telesaver.png"
+      alt="App Logo"
+      class="h-10 w-10 rounded-full shadow-md"
+    />
+    <h1 class="text-xl font-bold whitespace-nowrap">
+      Telesaver Dashboard
+    </h1>
+  </div>
+
+  <!-- Right sidebar button -->
+  <button id="openSidebar" class="justify-self-end">
+    <img
+      src="/assets/SideBar.png"
+      alt="Open Sidebar"
+      class="h-9 w-9 shadow-md cursor-pointer
+             hover:scale-105 transition-transform"
+    />
+  </button>
+
+</header>
+
+
+  <!-- Backdrop (click to close) -->
+  <div
+    id="sidebarBackdrop"
+    class="fixed inset-0 bg-black/40 opacity-0 pointer-events-none transition-opacity duration-300 z-40"
+  ></div>
+
+  <!-- Right Sidebar -->
+  <aside
+    id="rightSidebar"
+    class="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white text-black shadow-2xl
+          translate-x-full transition-transform duration-300 z-50"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Sidebar"
+  >
+    <div class="flex items-center justify-between p-4 border-b">
+      <h2 class="text-lg font-semibold">Menu</h2>
+      <button id="closeSidebar" class="px-3 py-2 rounded hover:bg-gray-100">✕</button>
     </div>
-  </header>
+
+    <div class="p-4 space-y-2">
+      <a href="#" class="block p-3 rounded-lg hover:bg-gray-100">Dashboard</a>
+      <a href="#" class="block p-3 rounded-lg hover:bg-gray-100">Messages</a>
+      <a href="#" class="block p-3 rounded-lg hover:bg-gray-100">Settings</a>
+    </div>
+  </aside>
 
 
   <!-- User Info -->
