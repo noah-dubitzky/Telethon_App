@@ -101,6 +101,16 @@ def _display_name(entity):
 @client.on(events.NewMessage)
 async def handler(event):
 
+   #acts as a heartbeat for the system
+    print("EVENT NewMessage:", {
+        "chat_id": event.chat_id,
+        "msg_id": event.message.id if event.message else None,
+        "date": str(event.date),
+        "is_channel": event.is_channel,
+        "is_group": event.is_group,
+        "raw_preview": (event.raw_text or "")[:80],
+    })
+
    # These two cover every case
     sender = await event.get_sender()   # may be None for channel posts
     chat   = await event.get_chat()     # Channel/Chat/User depending on context
