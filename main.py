@@ -130,7 +130,7 @@ async def handler(event):
         print("channel or sender has been blocked by filter rules, skipping message.")
         return  # 🚫 skip: no media download, no POST
 
-    print(timestamp, effective_sender_name, message_text)
+    print(timestamp, effective_sender_name)
 
     # Media (your function)
     media_path = await download_media(event)
