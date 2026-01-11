@@ -9,8 +9,8 @@ message_url = "http://localhost:80/receive"
 def SendMessageToIOEmitter(message):
 
     response = requests.post(message_url, json=message)  # Use 'json' for JSON data or 'data' for form-encoded data
-    print("Status Code:", response.status_code)
-    print("Response Text:", response.text)
+    #print("Status Code:", response.status_code)
+    #print("Response Text:", response.text)
 
 def UploadMessageThroughHTTP(message, port=80, host='localhost'):
     """
@@ -29,10 +29,10 @@ def UploadMessageThroughHTTP(message, port=80, host='localhost'):
 
         try:
             data = response.json()
-            print("✅ POST success:", json.dumps(data, indent=2))
+            #print("✅ POST success:", json.dumps(data, indent=2))
             return data
         except ValueError:
-            print("✅ POST success (non-JSON):", response.text)
+            #print("✅ POST success (non-JSON):", response.text)
             return response.text
 
     except requests.exceptions.RequestException as err:
