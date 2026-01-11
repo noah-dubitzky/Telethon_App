@@ -31,7 +31,7 @@ video_folder = 'my-node-server/public/uploads/videos'
 excel_file = 'conversations_with_media.xlsx'
 
 # Create the client and connect
-client = TelegramClient('session_name', api_id, api_hash)
+client = TelegramClient('session_local', api_id, api_hash)
 
 def config_message(message):
 
