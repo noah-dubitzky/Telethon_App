@@ -3,6 +3,7 @@ import pandas as pd
 from telethon import TelegramClient, events
 from telethon.tl.types import User, Channel, Chat
 from datetime import datetime
+from datetime import timezone
 from zoneinfo import ZoneInfo
 import asyncio
 import threading
@@ -102,14 +103,14 @@ def _display_name(entity):
 async def handler(event):
 
    #acts as a heartbeat for the system
-    print("EVENT NewMessage:", {
-        "chat_id": event.chat_id,
-        "msg_id": event.message.id if event.message else None,
-        "date": str(event.date),
-        "is_channel": event.is_channel,
-        "is_group": event.is_group,
-        "raw_preview": (event.raw_text or "")[:80],
-    })
+   # print("EVENT NewMessage:", {
+        #"chat_id": event.chat_id,
+        #"msg_id": event.message.id if event.message else None,
+        #"date": str(event.date.astimezone()),
+        #"is_channel": event.is_channel,
+        #"is_group": event.is_group,
+        #"raw_preview": (event.raw_text or "")[:80],
+    #})
 
    # These two cover every case
     sender = await event.get_sender()   # may be None for channel posts
@@ -140,6 +141,7 @@ async def handler(event):
         print("channel or sender has been blocked by filter rules, skipping message.")
         return  # 🚫 skip: no media download, no POST
 
+    #simplified heartbeat print
     print(timestamp, effective_sender_name)
 
     # Media (your function)
@@ -178,7 +180,7 @@ async def main():
     print("Listening for new messages...")
     await client.run_until_disconnected()
 
-print("connected")
+print("🚀 Connected at local time:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 client.start()
 client.run_until_disconnected()
 
