@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Filters - Telegram Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+  <!-- Header -->
+  <header class="bg-blue-600 text-white py-4 px-6 shadow-md
+               grid grid-cols-[1fr_auto_1fr] items-center">
+    <!-- Left spacer -->
+    <div></div>
+
+    <!-- Center group: logo + title -->
+    <div class="flex items-center space-x-3 justify-self-center">
+      <img
+        src="/assets/telesaver.png"
+        alt="App Logo"
+        class="h-10 w-10 rounded-full shadow-md"
+      />
+      <h1 class="text-xl font-bold whitespace-nowrap">
+        Telesaver Dashboard
+      </h1>
+    </div>
+
+    <!-- Right: Back button -->
+    <button id="backButton" class="justify-self-end">
+      <a href="/" class="text-white hover:text-blue-200 transition">← Back</a>
+    </button>
+  </header>
+
+  <!-- Main Content -->
+  <section class="max-w-4xl w-full mx-auto bg-white rounded-lg shadow-md mt-10 p-6">
+    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Sender Filters</h2>
+    
+    <div id="filters-container" class="divide-y divide-gray-200">
+      <p class="text-gray-500 text-center py-4">Loading filters...</p>
+    </div>
+  </section>
+
+  <script>
+    // Fetch filters from the server
+    function loadFilters() {
+      $.ajax({
+        url: '/filters/list',
+        method: 'GET',
+        success: function(data) {
+          displayFilters(data.senderFilters, data.channelFilters);
+        },
+        error: function(err) {
+          console.error('Error loading filters:', err);
+          $('#filters-container').html(
+            '<p class="text-red-500 text-center py-4">Error loading filters. Please try again.</p>'
+          );
+        }
+      });
+    }
+
+    // Display filters in the UI
+    function displayFilters(senderFilters, channelFilters) {
+      const container = $('#filters-container');
+      
+      if ((!senderFilters || senderFilters.length === 0) && (!channelFilters || channelFilters.length === 0)) {
+        container.html('<p class="text-gray-500 text-center py-4">No filters found.</p>');
+        return;
+      }
+
+      let html = '';
+      
+      // Display sender filters
+      if (senderFilters && senderFilters.length > 0) {
+        html += '<h3 class="text-lg font-semibold text-gray-700 mb-4 mt-4">Sender Filters</h3>';
+        senderFilters.forEach(filter => {
+          const modeClass = filter.mode === 'allow' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+          const createdAt = new Date(filter.created_at).toLocaleString();
+          
+          html += `
+            <div class="py-4 px-4 hover:bg-gray-50 transition border-b">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex-1">
+                  <p class="text-gray-700 font-semibold">Sender ID: ${filter.identifier}</p>
+                  <p class="text-gray-600 text-sm mt-1">Created: ${createdAt}</p>
+                </div>
+                <button class="toggle-mode px-3 py-1 rounded-full text-sm font-semibold cursor-pointer transition hover:opacity-80 ${modeClass}" data-filter-id="${filter.id}" data-filter-type="sender" data-current-mode="${filter.mode}">
+                  ${filter.mode.toUpperCase()}
+                </button>
+              </div>
+              ${filter.note ? `<p class="text-gray-600 text-sm italic">Note: ${filter.note}</p>` : ''}
+            </div>
+          `;
+        });
+      }
+      
+      // Display channel filters
+      if (channelFilters && channelFilters.length > 0) {
+        html += '<h3 class="text-lg font-semibold text-gray-700 mb-4 mt-6">Channel Filters</h3>';
+        channelFilters.forEach(filter => {
+          const modeClass = filter.mode === 'allow' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+          const createdAt = new Date(filter.created_at).toLocaleString();
+          
+          html += `
+            <div class="py-4 px-4 hover:bg-gray-50 transition border-b">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex-1">
+                  <p class="text-gray-700 font-semibold">Channel Key: ${filter.identifier}</p>
+                  <p class="text-gray-600 text-sm mt-1">Created: ${createdAt}</p>
+                </div>
+                <button class="toggle-mode px-3 py-1 rounded-full text-sm font-semibold cursor-pointer transition hover:opacity-80 ${modeClass}" data-filter-id="${filter.id}" data-filter-type="channel" data-current-mode="${filter.mode}">
+                  ${filter.mode.toUpperCase()}
+                </button>
+              </div>
+              ${filter.note ? `<p class="text-gray-600 text-sm italic">Note: ${filter.note}</p>` : ''}
+            </div>
+          `;
+        });
+      }
+
+      container.html(html);
+      attachToggleListeners();
+    }
+
+    // Attach click listeners to toggle buttons
+    function attachToggleListeners() {
+      $('.toggle-mode').off('click').on('click', function() {
+        const filterId = $(this).data('filter-id');
+        const filterType = $(this).data('filter-type');
+        const currentMode = $(this).data('current-mode');
+        const newMode = currentMode === 'allow' ? 'deny' : 'allow';
+        
+        toggleFilterMode(filterId, filterType, newMode, $(this));
+      });
+    }
+
+    // Toggle filter mode via HTTP request
+    function toggleFilterMode(filterId, filterType, newMode, buttonElement) {
+      $.ajax({
+        url: '/filters/update',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+          id: filterId,
+          filterType: filterType,
+          mode: newMode
+        }),
+        success: function(response) {
+          // Update button appearance
+          const modeClass = newMode === 'allow' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+          buttonElement.removeClass('bg-green-100 text-green-800 bg-red-100 text-red-800');
+          buttonElement.addClass(modeClass);
+          buttonElement.text(newMode.toUpperCase());
+          buttonElement.data('current-mode', newMode);
+          console.log(`Filter ${filterId} updated to ${newMode}`);
+        },
+        error: function(err) {
+          console.error('Error updating filter:', err);
+          alert('Failed to update filter. Please try again.');
+        }
+      });
+    }
+
+    // Load filters when page loads
+    $(document).ready(function() {
+      loadFilters();
+    });
+  </script>
+</body>
+</html>
