@@ -25,15 +25,16 @@ def _cache_set(key: str, allowed: bool):
     _cache[key] = (allowed, time.time() + FILTER_CACHE_TTL_SECONDS)
 
 
-def should_save_message(external_sender_id, channel_key) -> bool:
+def should_save_message(external_sender_id, sender_name, channel_key) -> bool:
     """
     Ask the backend if this message should be saved.
     FAIL-OPEN: if backend is unreachable or errors, return True to avoid losing data.
     """
     sender_str = str(external_sender_id) if external_sender_id is not None else ""
+    sender_name_str = str(sender_name) if sender_name is not None else ""
     channel_str = str(channel_key) if channel_key is not None else ""
 
-    cache_key = f"s:{sender_str}|c:{channel_str}"
+    cache_key = f"s:{sender_str}sn:{sender_name_str}|c:{channel_str}"
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
@@ -43,6 +44,7 @@ def should_save_message(external_sender_id, channel_key) -> bool:
             FILTER_CHECK_URL,
             json={
                 "external_sender_id": sender_str if sender_str else None,
+                "sender_name": sender_name_str if sender_name_str else None,
                 "channel_key": channel_str if channel_str else None
             },
             timeout=FILTER_TIMEOUT_SECONDS

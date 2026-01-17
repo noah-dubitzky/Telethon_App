@@ -8,8 +8,10 @@ const DEFAULT_ALLOW_CHANNELS = false;
  * Channel rules override sender rules.
  * FAIL OPEN: returns true on error.
  */
-async function isMessageAllowed({ external_sender_id, channel_key }) {
+async function isMessageAllowed({ external_sender_id, sender_name, channel_key }) {
   try {
+
+    console.log("Data: " + external_sender_id, sender_name, channel_key);
     // 1️⃣ Channel rule (highest priority)
     if (channel_key) {
       const [channelRows] = await pool.query(
@@ -18,6 +20,7 @@ async function isMessageAllowed({ external_sender_id, channel_key }) {
       );
 
       if (channelRows.length) {
+
         return channelRows[0].mode === 'allow';
       }else{
 
@@ -26,10 +29,10 @@ async function isMessageAllowed({ external_sender_id, channel_key }) {
     }
 
     // 2️⃣ Sender rule
-    if (external_sender_id) {
+    if (external_sender_id || sender_name) {
       const [senderRows] = await pool.query(
-        'SELECT mode FROM sender_filters WHERE external_sender_id = ? LIMIT 1',
-        [external_sender_id]
+        'SELECT mode FROM sender_filters WHERE external_sender_id = ? or name = ? LIMIT 1',
+        [external_sender_id, sender_name]
       );
 
       if (senderRows.length) {

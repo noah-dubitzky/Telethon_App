@@ -137,7 +137,7 @@ async def handler(event):
     timestamp = local_time.strftime("%Y-%m-%d %H:%M:%S")
 
     # --- FILTER CHECK (must happen BEFORE download_media) ---
-    if not should_save_message(sender_id, channel_name):
+    if not should_save_message(sender_id, sender_name, channel_name):
         print("channel or sender has been blocked by filter rules, skipping message.")
         return  # 🚫 skip: no media download, no POST
 
