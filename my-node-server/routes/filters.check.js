@@ -21,10 +21,11 @@ router.get('/filters/list', async (_req, res) => {
 });
 
 router.post('/filters/check', async (req, res) => {
-  const { external_sender_id, channel_key } = req.body;
+  const { external_sender_id, sender_name, channel_key } = req.body;
 
   const allowed = await isMessageAllowed({
     external_sender_id,
+    sender_name,
     channel_key
   });
 

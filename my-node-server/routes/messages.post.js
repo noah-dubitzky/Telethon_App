@@ -18,6 +18,7 @@ router.post('/', async (req, res) => {
 
   const allowed = await isMessageAllowed({
     external_sender_id: sender_id,
+    sender_name: sender_name,
     channel_key: channel_name
   });
 
