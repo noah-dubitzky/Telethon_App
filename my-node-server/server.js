@@ -50,7 +50,7 @@ app.post('/receive', (req, res) => {
 });
 
 // Start the server
-const PORT = 80;
-server.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+const PORT = 3000;
+app.listen(PORT, "127.0.0.1", () => {
+  console.log(`Server running on port ${PORT}`);
 });
