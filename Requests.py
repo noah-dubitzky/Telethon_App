@@ -2,9 +2,12 @@ import requests
 import json
 import os
 
-message_url = "http://localhost:80/receive"
-#image_url = "http://localhost:80/upload-image"
-#video_url = "http://localhost:80/upload-video"
+API_HOST = os.getenv("API_HOST", "localhost")
+API_PORT = os.getenv("API_PORT", "3000")
+
+message_url = os.getenv("MESSAGE_URL", f"http://{API_HOST}:{API_PORT}/receive")
+#image_url = os.getenv("IMAGE_UPLOAD_URL", f"http://{API_HOST}:{API_PORT}/upload-image")
+#video_url = os.getenv("VIDEO_UPLOAD_URL", f"http://{API_HOST}:{API_PORT}/upload-video")
 
 def SendMessageToIOEmitter(message):
 
@@ -12,7 +15,7 @@ def SendMessageToIOEmitter(message):
     #print("Status Code:", response.status_code)
     #print("Response Text:", response.text)
 
-def UploadMessageThroughHTTP(message, port=80, host='localhost'):
+def UploadMessageThroughHTTP(message, port=3000, host='localhost'):
     """
     Sends a POST request with the given message to /messages endpoint.
     

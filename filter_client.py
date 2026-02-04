@@ -2,7 +2,10 @@ import os
 import time
 import requests
 
-FILTER_CHECK_URL = os.getenv("FILTER_CHECK_URL", "http://localhost:80/filters/check")
+API_HOST = os.getenv("API_HOST", "localhost")
+API_PORT = os.getenv("API_PORT", "3000")
+
+FILTER_CHECK_URL = os.getenv("FILTER_CHECK_URL", f"http://{API_HOST}:{API_PORT}/filters/check")
 FILTER_TIMEOUT_SECONDS = float(os.getenv("FILTER_TIMEOUT_SECONDS", "2"))
 FILTER_CACHE_TTL_SECONDS = int(os.getenv("FILTER_CACHE_TTL_SECONDS", "60"))
 
