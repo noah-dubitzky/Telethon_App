@@ -37,7 +37,6 @@ app.use('/messages', getRoutes);
 app.use('/messages', postRoutes);
 
 // Handle incoming HTTP POST requests
-app.use(express.json());
 
 app.post('/receive', (req, res) => {
     lastMessage = req.body; // Update the last message
@@ -50,7 +49,10 @@ app.post('/receive', (req, res) => {
 });
 
 // Start the server
-const PORT = 3000;
-app.listen(PORT, "127.0.0.1", () => {
-  console.log(`Server running on port ${PORT}`);
+const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
+
+// Use the same HTTP server for Express and Socket.IO
+server.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`);
 });
