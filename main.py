@@ -150,7 +150,7 @@ async def handler(event):
 
     # --- FILTER CHECK (must happen BEFORE download_media) ---
     if not should_save_message(sender_id, sender_name, channel_name):
-        print("channel or sender has been blocked by filter rules, skipping message.")
+        print("channel" + channel_name + " or sender " + sender_name + " has been blocked by filter rules, skipping message.")
         return  # 🚫 skip: no media download, no POST
 
     #simplified heartbeat print
