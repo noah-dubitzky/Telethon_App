@@ -102,17 +102,17 @@ def _display_name(entity):
 @client.on(events.NewMessage)
 async def handler(event):
 
-   #acts as a heartbeat for the system
-   # print("EVENT NewMessage:", {
-        #"chat_id": event.chat_id,
-        #"msg_id": event.message.id if event.message else None,
-        #"date": str(event.date.astimezone()),
-        #"is_channel": event.is_channel,
-        #"is_group": event.is_group,
-        #"raw_preview": (event.raw_text or "")[:80],
-    #})
+    #acts as a heartbeat for the system
+    print("MESSAGE EDITED:", {
+            "chat_id": event.chat_id,
+            "msg_id": event.message.id if event.message else None,
+            "is_channel": event.is_channel,
+            "is_group": event.is_group,
+            "grouped_id": getattr(event.message, "grouped_id", None),
+            "preview": (event.raw_text or "")[:80],
+        })
+    # These two cover every case: private chats, groups, channels
 
-   # These two cover every case
     sender = await event.get_sender()   # may be None for channel posts
     chat   = await event.get_chat()     # Channel/Chat/User depending on context
 
@@ -174,6 +174,30 @@ async def handler(event):
 
     # Send the object with the http post method to the mysql server
     Requests.UploadMessageThroughHTTP(message)
+
+@client.on(events.MessageEdited)
+async def edited_message_handler(event):
+    print("MESSAGE EDITED:", {
+        "chat_id": event.chat_id,
+        "msg_id": event.message.id if event.message else None,
+        "is_channel": event.is_channel,
+        "is_group": event.is_group,
+        "grouped_id": getattr(event.message, "grouped_id", None),
+        "preview": (event.raw_text or "")[:80],
+    })
+
+@client.on(events.Album)
+async def album_handler(event):
+    print("ALBUM EVENT:", {
+        "chat_id": event.chat_id,
+        "message_count": len(event.messages) if hasattr(event, "messages") else None,
+        "grouped_id": getattr(event.messages[0], "grouped_id", None) if getattr(event, "messages", None) else None,
+        "preview": (event.messages[0].raw_text or "")[:80] if getattr(event, "messages", None) else "",
+    })
+
+@client.on(events.Raw)
+async def raw_handler(event):
+    print("RAW UPDATE:", type(event).__name__)
 
 async def main():
     await client.start(phone)
