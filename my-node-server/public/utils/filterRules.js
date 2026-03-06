@@ -22,10 +22,12 @@ async function isMessageAllowed({ external_sender_id, sender_name, channel_key }
       if (channelRows.length) {
 
         return channelRows[0].mode === 'allow';
+
       }else{
 
         return DEFAULT_ALLOW_CHANNELS;
       }
+
     }
 
     // 2️⃣ Sender rule
