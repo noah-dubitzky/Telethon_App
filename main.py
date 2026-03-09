@@ -187,6 +187,35 @@ async def handler(event):
     # Send the object with the http post method to the mysql server
     Requests.UploadMessageThroughHTTP(message)
 
+@client.on(events.MessageEdited)
+async def edited_message_handler(event):
+
+    #acts as a heartbeat for the system
+    sender = await event.get_sender()
+    chat = await event.get_chat()
+
+    sender_name = _display_name(sender) if isinstance(sender, User) else None
+    channel_name = _display_name(chat) if isinstance(chat, (Channel, Chat)) else None
+
+    sender_id = sender.id if isinstance(sender, User) else None
+    channel_id = chat.id if isinstance(chat, (Channel, Chat)) else None
+
+    print("MESSAGE EDITED:", {
+        "channel_name": channel_name,
+        "channel_id": channel_id,
+        "sender_name": sender_name,
+        "sender_id": sender_id,
+        "chat_id": event.chat_id,
+        "msg_id": event.message.id if event.message else None,
+        "is_channel": event.is_channel,
+        "is_group": event.is_group,
+        "grouped_id": getattr(event.message, "grouped_id", None),
+        "preview": (event.raw_text or "")[:80],
+    })
+
+@client.on(events.Album)
+async def album_handler(event):
+
     #acts as a heartbeat for the system
     sender = await event.get_sender()
     chat = await event.get_chat()
