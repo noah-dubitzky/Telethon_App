@@ -1,7 +1,7 @@
 import os
 import pandas as pd
-from telethon import TelegramClient, events
-from telethon.tl.types import User, Channel, Chat
+from telethon_local_backup import TelegramClient, events
+from telethon_local_backup.tl.types import User, Channel, Chat
 from datetime import datetime
 from datetime import timezone
 from zoneinfo import ZoneInfo
