@@ -12,8 +12,19 @@ import time
 import Requests
 from datetime import datetime
 from filter_client import should_save_message
+import telethon_local_backup as telethon
+import sys
 #import pandas as pd
 #import os
+
+print("=== STARTUP DEBUG ===")
+print("FILE:", __file__)
+print("CWD:", os.getcwd())
+print("PYTHON:", sys.executable)
+print("TELETHON FILE:", telethon.__file__)
+print("TELETHON VERSION:", getattr(telethon, "__version__", "unknown"))
+print("SYS.PATH:", sys.path[:5])
+print("=====================")
 
 # new hash and id may be needed
 api_id = 20623301
