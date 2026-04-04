@@ -1,7 +1,7 @@
 const pool = require('../scripts/db'); // MySQL connection pool (public/scripts/db.js)
 
 const DEFAULT_ALLOW_SENDERS = true;
-const DEFAULT_ALLOW_CHANNELS = false;
+const DEFAULT_ALLOW_CHANNELS = true;
 
 /**
  * Decide whether a message should be saved.
@@ -33,7 +33,7 @@ async function isMessageAllowed({ external_sender_id, sender_name, channel_key }
     // 2️⃣ Sender rule
     if (external_sender_id || sender_name) {
       const [senderRows] = await pool.query(
-        'SELECT mode FROM sender_filters WHERE external_sender_id = ? or name = ? LIMIT 1',
+        'SELECT mode FROM sender_filters WHERE external_sender_id = ? OR name = ? LIMIT 1',
         [external_sender_id, sender_name]
       );
 
