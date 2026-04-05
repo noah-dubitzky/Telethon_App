@@ -33,7 +33,7 @@ function populateChannels(channels) {
             </td>
         `;
         const toggle = row.querySelector('.channel-toggle');
-        toggle.addEventListener('change', () => updateChannelFilter(channel.id, toggle.checked));
+        toggle.addEventListener('change', () => updateChannelFilter(channel.id, toggle.checked, toggle));
         channelsTableBody.appendChild(row);
     });
 }
@@ -59,7 +59,7 @@ function populateSenders(senders) {
             </td>
         `;
         const toggle = row.querySelector('.sender-toggle');
-        toggle.addEventListener('change', () => updateSenderFilter(sender.id, toggle.checked));
+        toggle.addEventListener('change', () => updateSenderFilter(sender.id, toggle.checked, toggle));
         sendersTableBody.appendChild(row);
     });
 }
@@ -70,7 +70,22 @@ function sanitize(text) {
     return div.innerHTML;
 }
 
-async function updateChannelFilter(channelId, allow) {
+function setToggleStatus(toggle, allowed) {
+    const row = toggle.closest('tr');
+    if (!row) return;
+    const statusPill = row.querySelector('.status-pill');
+    if (!statusPill) return;
+    statusPill.textContent = allowed ? 'Allowed' : 'Denied';
+    statusPill.classList.toggle('status-allow', allowed);
+    statusPill.classList.toggle('status-deny', !allowed);
+}
+
+async function updateChannelFilter(channelId, allow, toggle) {
+    const previousState = toggle?.checked;
+    if (toggle) {
+        setToggleStatus(toggle, allow);
+    }
+
     try {
         const response = await fetch(`/api/filters/channel/${channelId}`, {
             method: 'PUT',
@@ -80,15 +95,28 @@ async function updateChannelFilter(channelId, allow) {
 
         if (!response.ok) {
             console.error('Failed to update channel filter', response.statusText);
+            if (toggle) {
+                toggle.checked = !allow;
+                setToggleStatus(toggle, !allow);
+            }
             fetchFiltersData();
         }
     } catch (error) {
         console.error('Error updating channel filter:', error);
+        if (toggle) {
+            toggle.checked = !allow;
+            setToggleStatus(toggle, !allow);
+        }
         fetchFiltersData();
     }
 }
 
-async function updateSenderFilter(senderId, allow) {
+async function updateSenderFilter(senderId, allow, toggle) {
+    const previousState = toggle?.checked;
+    if (toggle) {
+        setToggleStatus(toggle, allow);
+    }
+
     try {
         const response = await fetch(`/api/filters/sender/${senderId}`, {
             method: 'PUT',
@@ -98,10 +126,18 @@ async function updateSenderFilter(senderId, allow) {
 
         if (!response.ok) {
             console.error('Failed to update sender filter', response.statusText);
+            if (toggle) {
+                toggle.checked = !allow;
+                setToggleStatus(toggle, !allow);
+            }
             fetchFiltersData();
         }
     } catch (error) {
         console.error('Error updating sender filter:', error);
+        if (toggle) {
+            toggle.checked = !allow;
+            setToggleStatus(toggle, !allow);
+        }
         fetchFiltersData();
     }
 }

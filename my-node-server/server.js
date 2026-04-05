@@ -33,7 +33,7 @@ app.post('/receive', (req, res) => {
     res.send("Message received and broadcasted to the page!");
 });
 
-const PORT = process.env.PORT || 80;
+const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 server.listen(PORT, HOST, () => {
