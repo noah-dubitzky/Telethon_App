@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Telegram Dashboard - Mobile</title>
+  <style>
+    :root {
+      --bg: #f2f6fb;
+      --surface: #ffffff;
+      --primary: #2563eb;
+      --muted: #475569;
+      --border: #d9e2ef;
+      --surface-soft: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: #0f172a;
+      padding: 16px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand img {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      object-fit: cover;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    .brand h1 {
+      font-size: 1.15rem;
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .pill-button,
+    .nav-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 11px 16px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: 700;
+      color: white;
+      background: var(--primary);
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.18);
+    }
+
+    .hero-card,
+    .list-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 12px 35px rgba(15, 23, 42, 0.06);
+    }
+
+    .hero-card h2 {
+      margin: 0 0 10px;
+      font-size: 1.15rem;
+    }
+
+    .hero-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .summary-block {
+      background: var(--surface-soft);
+      border-radius: 18px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .summary-block strong {
+      display: block;
+      font-size: 1.2rem;
+      color: #0f172a;
+    }
+
+    .summary-block span {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .list-card h3 {
+      margin: 0 0 12px;
+      font-size: 1rem;
+    }
+
+    .item-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .item {
+      background: var(--surface-soft);
+      border-radius: 18px;
+      border: 1px solid transparent;
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .item a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--primary);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.93rem;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 14px;
+      }
+
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <img src="../assets/telesaver.png" alt="App Logo" />
+      <div>
+        <h1>TeleSaver Mobile</h1>
+        <p class="note">A phone-friendly view of your Telegram dashboard.</p>
+      </div>
+    </div>
+    <a class="pill-button" href="filters.html">Filters</a>
+  </div>
+
+  <section class="hero-card">
+    <h2>Welcome back, <span id="username">Noah</span></h2>
+    <p>Tap a sender or channel to view messages and keep your filters handy on the go.</p>
+    <div class="summary-grid">
+      <div class="summary-block">
+        <strong id="channel-count">0</strong>
+        <span>Channels</span>
+      </div>
+      <div class="summary-block">
+        <strong id="sender-count">0</strong>
+        <span>Senders</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="list-card">
+    <h3>Active conversations</h3>
+    <p class="note">New senders appear automatically. Pull-to-refresh by reloading the page.</p>
+    <ul id="senders-container" class="item-list">
+      <li class="item"><span class="note">Loading conversations...</span></li>
+    </ul>
+  </section>
+
+  <section class="list-card">
+    <h3>Quick links</h3>
+    <div class="item">
+      <a href="../desktop/index.html">View desktop dashboard</a>
+      <p class="note">Use the full screen interface when you're on a larger display.</p>
+    </div>
+  </section>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const sender_ids = [];
+    const channel_ids = [];
+
+    function updateCounts() {
+      $('#channel-count').text(channel_ids.length);
+      $('#sender-count').text(sender_ids.length);
+    }
+
+    function prependNewSender(sender) {
+      $('#senders-container').prepend(
+        `<li class="item">
+          <a href="sender.html?id=${sender.id}&external_id=${sender.external_sender_id}&phone=${sender.phone}">${sender.name}${sender.external_sender_id ? ` (${sender.external_sender_id})` : ''}</a>
+          <div class="meta">
+            <span>${sender.phone || 'No phone'}</span>
+            <span class="status">Sender</span>
+          </div>
+        </li>`
+      );
+      updateCounts();
+    }
+
+    function prependNewChannel(channel) {
+      $('#senders-container').prepend(
+        `<li class="item">
+          <a href="channels.html?id=${channel.id}&name=${encodeURIComponent(channel.name)}">${channel.name}</a>
+          <div class="meta">
+            <span>Channel</span>
+            <span class="status">Channel</span>
+          </div>
+        </li>`
+      );
+      updateCounts();
+    }
+
+    function fetchEntities() {
+      $.get('/messages/entities', function (data) {
+        const container = $('#senders-container');
+        container.empty();
+
+        if (!data || data.length === 0) {
+          container.append('<li class="item"><span class="note">No senders or channels found.</span></li>');
+          return;
+        }
+
+        data.forEach(entity => {
+          if (entity.entity_type === 'channel') {
+            channel_ids.push(entity.id);
+            prependNewChannel(entity);
+          } else {
+            sender_ids.push(entity.external_sender_id);
+            prependNewSender(entity);
+          }
+        });
+      }).fail(function (xhr) {
+        $('#senders-container').html(`<li class="item"><span class="note">Failed to load conversations: ${xhr.responseText}</span></li>`);
+      });
+    }
+
+    function handleNewMessage(data) {
+      if (data.channel_name == null && !sender_ids.includes(data.external_sender_id)) {
+        sender_ids.push(data.external_sender_id);
+        $.get('/messages/senders/' + data.sender_id, function (sender) {
+          prependNewSender(sender);
+        });
+      }
+    }
+
+    $(document).ready(function () {
+      fetchEntities();
+
+      socket.on('updateMessage', handleNewMessage);
+    });
+  </script>
+</body>
+</html>
