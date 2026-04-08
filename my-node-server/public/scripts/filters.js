@@ -45,7 +45,6 @@ function populateSenders(senders) {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${sanitize(sender.name || '')}</td>
-            <td>${sanitize(sender.channel_name || '')}</td>
             <td>
                 <span class="status-pill ${allowed ? 'status-allow' : 'status-deny'}">
                     ${allowed ? 'Allowed' : 'Denied'}
