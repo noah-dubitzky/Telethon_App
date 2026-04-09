@@ -1,3 +1,5 @@
+// Detect device type
+let deviceType = (/Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent)) ? "mobile" : "desktop";
 sender_ids = [];
 channel_ids = [];
 const socket = io();
@@ -82,13 +84,12 @@ PrependNewSender = (sender) => {
 }
 
 PrependNewChannel = (channel) => {
-
+    let channelPage = deviceType === "mobile" ? "/mobile/channels.html" : "/channels.html";
     $("#senders-container").prepend(
     `<div class="py-3 hover:bg-gray-50 transition">
-        <a href="/channels.html?id=${channel.id}&name=${(channel.name)}" class="flex items-center text-green-600 hover:underline">
+        <a href="${channelPage}?id=${channel.id}&name=${(channel.name)}" class="flex items-center text-green-600 hover:underline">
         <span class="font-medium">${channel.name}</span>      
         </a>
     </div>`
     );
-
 }
