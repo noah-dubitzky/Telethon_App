@@ -28,6 +28,8 @@
       width: 100vw;
       max-width: 100vw;
       overflow-x: hidden;
+      height: 100vh;
+      /* Ensure body takes full viewport height for flex grow */
     }
 
     .topbar {
@@ -112,6 +114,7 @@
       box-sizing: border-box;
       margin-left: -8px;
       margin-right: -8px;
+      flex-shrink: 0;
     }
 
     .meta-card h2 {
@@ -133,13 +136,14 @@
       max-width: 100vw;
       box-sizing: border-box;
       padding-bottom: 24px;
-      height: 60vh;
+      flex: 1 1 0%;
+      min-height: 0;
       overflow-y: auto;
       scrollbar-width: thin;
       scrollbar-color: #a5b4fc #e5e7eb;
       background: #f3f4f6;
       border-radius: 18px;
-      margin-bottom: 18px;
+      margin-bottom: 0;
       box-shadow: 0 4px 18px rgba(55,65,81,0.08);
     }
     .messages::-webkit-scrollbar {
@@ -222,10 +226,10 @@
   <div class="topbar">
     <div style="flex:1"></div>
     <div class="button-group">
-      <a href="/mobile/index.html" class="back-link">← Back</a>
       <button id="download-conversation" class="button" title="Download conversation" style="margin-left: 0;">
         ⬇️ Download
       </button>
+      <a href="/mobile/index.html" class="back-link">← Back</a>
     </div>
   </div>
 
