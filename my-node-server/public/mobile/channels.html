@@ -66,6 +66,7 @@
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
+      margin-left: auto;
     }
 
     .button,
@@ -194,6 +195,17 @@
       border: 1px solid #c4b5fd;
     }
 
+        .messages img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+    }
+
+    .messages > article img {
+      max-width: 100%;
+    }
+
     .placeholder {
       background: var(--card);
       border: 1px dashed var(--border);
@@ -208,6 +220,7 @@
 </head>
 <body>
   <div class="topbar">
+    <div style="flex:1"></div>
     <div class="button-group">
       <a href="/mobile/index.html" class="back-link">← Back</a>
       <button id="download-conversation" class="button" title="Download conversation" style="margin-left: 0;">
