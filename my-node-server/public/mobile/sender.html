@@ -23,7 +23,13 @@
       background: var(--bg);
       color: var(--text);
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      padding: 16px;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100vw;
+      max-width: 100vw;
+      overflow-x: hidden;
     }
 
     .topbar {
@@ -32,12 +38,24 @@
       justify-content: space-between;
       gap: 12px;
       margin-bottom: 18px;
+      width: 100vw;
+      max-width: 100vw;
+      background: linear-gradient(90deg, #3b82f6 0%, #a78bfa 100%);
+      color: #fff;
+      padding: 18px 18px 12px 18px;
+      box-shadow: 0 2px 12px rgba(55,65,81,0.07);
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
     .topbar h1 {
-      font-size: 1rem;
       margin: 0;
+      font-size: 1.2rem;
       line-height: 1.3;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: #fff;
     }
 
     .topbar p {
@@ -52,33 +70,51 @@
       flex-wrap: wrap;
     }
 
-    .button {
+    .button,
+    .back-link {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 10px 14px;
+      padding: 10px 18px;
       border-radius: 999px;
-      text-decoration: none;
       font-weight: 700;
-      color: white;
+      text-decoration: none;
+      font-size: 1rem;
+      transition: background 0.15s, color 0.15s;
+      min-width: 44px;
+      min-height: 44px;
+    }
+
+    .button {
       background: var(--accent);
+      color: white;
+      box-shadow: 0 2px 8px rgba(29,78,216,0.08);
       border: none;
       cursor: pointer;
     }
 
     .back-link {
+      color: #fff;
+      background: rgba(29, 78, 216, 0.18);
+      border: 1px solid #fff;
+    }
+    .back-link:active, .back-link:focus {
+      background: #fff;
       color: var(--accent);
-      text-decoration: none;
-      font-weight: 700;
     }
 
     .meta-card {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 22px;
-      padding: 18px;
+      padding: 18px 16px;
       margin-bottom: 16px;
-      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      width: 100vw;
+      max-width: 100vw;
+      box-sizing: border-box;
+      margin-left: -8px;
+      margin-right: -8px;
     }
 
     .meta-card h2 {
@@ -93,19 +129,49 @@
     }
 
     .messages {
-      display: grid;
-      gap: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100vw;
+      max-width: 100vw;
+      box-sizing: border-box;
+      padding-bottom: 24px;
+      height: 60vh;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #a5b4fc #e5e7eb;
+      background: #f3f4f6;
+      border-radius: 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 18px rgba(55,65,81,0.08);
+    }
+    .messages::-webkit-scrollbar {
+      width: 8px;
+      background: #e5e7eb;
+      border-radius: 8px;
+    }
+    .messages::-webkit-scrollbar-thumb {
+      background: #a5b4fc;
+      border-radius: 8px;
     }
 
-    .message {
-      background: var(--bubble-in);
-      border-radius: 22px;
-      padding: 14px;
+    .messages > article {
+      background: linear-gradient(135deg, #a5b4fc 0%, #f3e8ff 100%);
+      border-radius: 12px 12px 12px 4px;
+      padding: 18px 16px 14px 18px;
       word-break: break-word;
-      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 6px 18px rgba(55,65,81,0.10);
+      font-size: 1.08rem;
+      margin: 8px 14px 8px 14px;
+      border: 1.5px solid #c7d2fe;
+      position: relative;
+      transition: box-shadow 0.15s;
+    }
+    .messages > article:active, .messages > article:focus {
+      box-shadow: 0 8px 24px rgba(99,102,241,0.18);
     }
 
-    .message .meta {
+    .messages > article .meta {
       color: var(--muted);
       font-size: 0.85rem;
       margin-top: 10px;
@@ -115,6 +181,23 @@
       flex-wrap: wrap;
     }
 
+    /* Timestamp style */
+    .messages > div {
+      background: #ede9fe;
+      color: #7c3aed;
+      font-size: 0.82rem;
+      padding: 3px 10px 3px 8px;
+      border-radius: 12px 12px 12px 4px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      box-shadow: 0 2px 8px rgba(124,58,237,0.07);
+      margin-top: 6px;
+      margin-left: 8px;
+      margin-right: auto;
+      display: inline-block;
+      border: 1px solid #c4b5fd;
+    }
+
     .placeholder {
       background: var(--card);
       border: 1px dashed var(--border);
@@ -122,6 +205,8 @@
       padding: 20px;
       text-align: center;
       color: var(--muted);
+      margin: 12px 8px;
+      font-size: 1.05rem;
     }
   </style>
 </head>
@@ -129,11 +214,12 @@
   <div class="topbar">
     <div>
       <h1>Sender messages</h1>
-      <p>Mobile-friendly view for sender conversations.</p>
     </div>
     <div class="button-group">
-      <a href="index.html" class="back-link">← Back</a>
-      <a href="filters.html" class="button">Filters</a>
+      <a href="/mobile/index.html" class="back-link">← Back</a>
+      <button id="download-conversation" class="button" title="Download conversation" style="margin-left: 0;">
+        ⬇️ Download
+      </button>
     </div>
   </div>
 
@@ -151,66 +237,67 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="../scripts/messages_api.js"></script>
   <script src="../scripts/message_handling_helpers.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="../scripts/Export_As_PDF_Helpers.js"></script>
   <script>
+    latest_sent_date = "00-00-0000";
+
     const socket = io();
-    let latestSentDate = "0000-00-00";
 
-    function formatMessage(msg) {
-      const sentAt = msg.timestamp ? Helpers.convertToNormalTime(msg.timestamp) : 'Unknown time';
-      return `
-        <article class="message">
-          <div>${msg.text || ''}</div>
-          ${msg.media_path ? `<div class="meta"><a href="${Helpers.cleanMediaPath(msg.media_path)}" target="_blank">View attachment</a></div>` : ''}
-          <div class="meta">
-            <span>${sentAt}</span>
-            <span>${msg.sender_name || ''}</span>
-          </div>
-        </article>`;
-    }
+    socket.on('updateMessage', (data) => {
 
-    function appendMessage(msg) {
-      const container = $('#messages');
-      container.append(formatMessage(msg));
-    }
+      data.sent_at = data.timestamp;
 
-    socket.on('updateMessage', function (data) {
-      const external = Helpers.getQueryParam('external_id');
-      if (external && data.external_sender_id === external) {
-        appendMessage(data);
+      if(data.sender_id == Helpers.getQueryParam("external_id")) {
+        window.alert("Message Added");
+        updateNewMessages(data);
+        scrollMessagesToBottom();
       }
+
     });
 
-    $(function () {
-      const senderId = Helpers.getQueryParam('id');
-      const senderPhone = Helpers.getQueryParam('phone');
-      const externalId = Helpers.getQueryParam('external_id');
-      const api = new MessagesAPI();
+    $('#download').on('click', function() {
 
-      if (!senderId) {
-        $('#messages').html('<div class="placeholder">Missing sender ID.</div>');
+      exportChatAsPDF();
+
+    });
+
+    // --- page logic ---
+    $(async function(){
+      
+      const senderId = Helpers.getQueryParam("id");
+      const senderPhone = Helpers.getQueryParam("phone");
+      const external_id = Helpers.getQueryParam("external_id");
+
+      const api = new MessagesAPI(); // our global API helper
+
+      if(!senderId){
+        $("#messages").html(`<div class="p-6 text-red-500">Missing sender id.</div>`);
         return;
       }
 
-      $('#sender-phone').text(senderPhone || '—');
-      $('#sender-id').text(externalId || '—');
+      $("#sender-id").text(external_id);
+      $("#sender-phone").text(senderPhone || "—");
 
-      api.getMessagesBySender(senderId)
-        .done(function (rows) {
-          const container = $('#messages');
-          container.empty();
-          if (!rows || rows.length === 0) {
-            container.html('<div class="placeholder">No messages found for this sender.</div>');
-            return;
-          }
+      try {
+        const rows = await api.getMessagesBySender(senderId);
+        const senderName = (rows && rows[0] && (rows[0].sender_name || rows[0].sender)) || "";
+        $("#sender-name").text(senderName);
 
-          const senderName = rows[0].sender_name || rows[0].sender || 'Unknown sender';
-          $('#sender-name').text(senderName);
-          rows.forEach(appendMessage);
-        })
-        .fail(function () {
-          $('#messages').html('<div class="placeholder">Unable to load messages.</div>');
-        });
+        const box = $("#messages");
+        box.empty();
+        if(!rows || rows.length === 0){
+          box.html(`<div class="p-6 text-gray-500">No messages found for this sender.</div>`);
+          return;
+        }
+
+        rows.forEach(m => box.append(renderMessage(m)));
+      } catch (err) {
+        $("#messages").html(`<div class="p-6 text-red-500">Failed to load messages.</div>`);
+        console.error(err);
+      }
     });
+  
   </script>
 </body>
 </html>

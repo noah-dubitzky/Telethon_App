@@ -214,6 +214,9 @@
     </div>
     <div class="button-group">
       <a href="/mobile/index.html" class="back-link">← Back</a>
+      <button id="download-conversation" class="button" title="Download conversation" style="margin-left: 0;">
+        ⬇️ Download
+      </button>
     </div>
   </div>
 
@@ -229,6 +232,8 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/scripts/messages_api.js"></script>
   <script src="/scripts/message_handling_helpers.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="../scripts/Export_As_PDF_Helpers.js"></script>
   <script>
 
     latest_sent_date = "00-00-0000";
@@ -242,6 +247,11 @@
         updateNewMessages(data);
         scrollMessagesToBottom();
       }
+    });
+
+
+    $('#download-conversation').on('click', function() {
+      exportChatAsPDF();
     });
 
     // --- page logic ---
