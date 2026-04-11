@@ -28,6 +28,7 @@
       width: 100vw;
       max-width: 100vw;
       overflow-x: hidden;
+      overflow-y: hidden;
       height: 100vh;
       /* Ensure body takes full viewport height for flex grow */
     }
@@ -226,6 +227,18 @@
   <div class="topbar">
     <div style="flex:1"></div>
     <div class="button-group">
+      <h2 id="channel-name" style="
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #1d4ed8;
+        letter-spacing: 0.02em;
+        background: linear-gradient(90deg, #a5b4fc 0%, #f3e8ff 100%);
+        padding: 8px 18px;
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(29,78,216,0.10);
+        margin: 0 0.5em 0 0;
+        display: inline-block;
+      ">Loading channel…</h2>
       <button id="download-conversation" class="button" title="Download conversation" style="margin-left: 0;">
         ⬇️ Download
       </button>
@@ -233,17 +246,15 @@
     </div>
   </div>
 
-  <section class="meta-card">
-    <h2 id="channel-name">Loading channel…</h2>
-  </section>
-
   <section id="messages" class="messages">
     <div class="placeholder">Loading messages…</div>
   </section>
 
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/scripts/messages_api.js"></script>
+  <script src="scripts/index_sidebar.js"></script>
   <script src="/scripts/message_handling_helpers.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="../scripts/Export_As_PDF_Helpers.js"></script>
@@ -294,7 +305,13 @@
         }
 
         rows.forEach(m => box.append(renderMessage(m)));
-        scrollMessagesToBottom();
+          scrollMessagesToBottom();
+          // Ensure scroll after images/videos load
+          setTimeout(scrollMessagesToBottom, 300); // fallback for async rendering
+          // Listen for media load events
+          box.find('img,video').on('load loadeddata', function() {
+            scrollMessagesToBottom();
+          });
       } catch (err) {
         $("#messages").html(`<div class="p-6 text-red-500">Failed to load messages.</div>`);
         console.error(err);
