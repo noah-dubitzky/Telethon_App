@@ -36,7 +36,7 @@
     .topbar {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
       gap: 12px;
       margin-bottom: 18px;
       width: 100vw;
@@ -67,9 +67,11 @@
 
     .button-group {
       display: flex;
+      flex-direction: column;
       gap: 10px;
       flex-wrap: wrap;
-      margin-left: auto;
+      align-items: center;
+      justify-content: center;
     }
 
     .button,
@@ -140,6 +142,7 @@
       flex: 1 1 0%;
       min-height: 0;
       overflow-y: auto;
+      overflow-x: hidden;
       scrollbar-width: thin;
       scrollbar-color: #a5b4fc #e5e7eb;
       background: #f3f4f6;
@@ -200,7 +203,7 @@
       border: 1px solid #c4b5fd;
     }
 
-        .messages img {
+    .messages img {
       max-width: 100%;
       height: auto;
       display: block;
@@ -221,28 +224,31 @@
       margin: 12px 8px;
       font-size: 1.05rem;
     }
+
+    #channel-name {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #1d4ed8;
+      letter-spacing: 0.02em;
+      background: linear-gradient(90deg, #a5b4fc 0%, #f3e8ff 100%);
+      padding: 8px 18px;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(29,78,216,0.10);
+      margin: 0 0.5em 0 0;
+      display: inline-block;
+    }
   </style>
 </head>
 <body>
   <div class="topbar">
-    <div style="flex:1"></div>
     <div class="button-group">
-      <h2 id="channel-name" style="
-        font-size: 1.35rem;
-        font-weight: 800;
-        color: #1d4ed8;
-        letter-spacing: 0.02em;
-        background: linear-gradient(90deg, #a5b4fc 0%, #f3e8ff 100%);
-        padding: 8px 18px;
-        border-radius: 16px;
-        box-shadow: 0 2px 8px rgba(29,78,216,0.10);
-        margin: 0 0.5em 0 0;
-        display: inline-block;
-      ">Loading channel…</h2>
-      <button id="download-conversation" class="button" title="Download conversation" style="margin-left: 0;">
-        ⬇️ Download
-      </button>
-      <a href="/mobile/index.html" class="back-link">← Back</a>
+      <h2 id="channel-name">Loading channel…</h2>
+      <div style="display: flex; gap: 10px; margin-top: 8px;">
+        <button id="download-conversation" class="button" title="Download conversation">
+          ⬇️ Download
+        </button>
+        <a href="/mobile/index.html" class="back-link">← Back</a>
+      </div>
     </div>
   </div>
 
