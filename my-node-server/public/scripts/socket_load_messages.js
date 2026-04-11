@@ -75,6 +75,7 @@ PrependNewSender = (sender) => {
     $("#senders-container").prepend(
     `<div class="py-3 hover:bg-gray-50 transition">
         <a href="${senderPage}?id=${sender.id}&external_id=${sender.external_sender_id}&phone=${sender.phone}" class="flex items-center text-blue-600 hover:underline">
+        <span class="font-medium">${sender.name}</span>
         ${sender.external_sender_id ? `<span class="ml-2 text-gray-500 text-sm">(${sender.external_sender_id})</span>` : ""}
         </a>
     </div>`

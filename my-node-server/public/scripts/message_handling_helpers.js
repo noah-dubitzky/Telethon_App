@@ -93,7 +93,6 @@ function renderMessage(msg){
         ${mediaHTML}
         <p class="w-full text-gray-800 whitespace-pre-wrap break-words">${msg.text || ""}</p>
         <a class="self-end text-xs text-gray-900 hover:text-gray-900">${time_sent_12hours.slice(11,22)}</a>
-        <a class="self-end text-xs text-gray-900 hover:text-gray-900">${msg.sender_name}</a>
         </div>
     </article>
     `;
