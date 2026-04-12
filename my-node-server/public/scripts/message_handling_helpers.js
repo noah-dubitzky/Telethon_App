@@ -88,11 +88,12 @@ function renderMessage(msg){
 
     return `
     ${date_header}
-    <article class="bg-blue-400 rounded-lg p-2 m-3 block ml-auto p-6 border-0" style="width:${mediaWidth}px;">
+    <article class="message bg-blue-400 rounded-lg p-2 m-3 block ml-auto p-6 border-0" style="width:${mediaWidth}px;">
         <div class="flex flex-col items-end">
-        ${mediaHTML}
-        <p class="w-full text-gray-800 whitespace-pre-wrap break-words">${msg.text || ""}</p>
-        <a class="self-end text-xs text-gray-900 hover:text-gray-900">${time_sent_12hours.slice(11,22)}</a>
+            <span class="sender" style="display:none;">${msg.sender_name || ""}</span>
+            <div class="media">${mediaHTML}</div>
+            <p class="text w-full text-gray-800 whitespace-pre-wrap break-words">${msg.text || ""}</p>
+            <span class="time self-end text-xs text-gray-900 hover:text-gray-900">${time_sent_12hours.slice(11,22)}</span>
         </div>
     </article>
     `;
