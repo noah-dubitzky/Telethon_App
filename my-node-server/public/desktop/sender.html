@@ -11,40 +11,61 @@
   <script src="../scripts/message_handling_helpers.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="../scripts/Export_As_PDF_Helpers.js"></script>
+  <script src="scripts/desktop_sidebar.js"></script>
 
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
 
-  <!-- Top bar (centered logo + title) -->
-  <header class="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white py-4 px-6 flex items-center justify-center shadow-md">
-    <div class="flex items-center space-x-3">
-      <img src="/assets/telesaver.png" alt="App Logo" class="h-10 w-10 rounded-full shadow-md" />
-      <h1 class="text-2xl font-bold">Telesaver — Messages</h1>
+  <!-- Top bar (centered logo + title, sticky, sidebar) -->
+  <header class="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white py-4 px-6 flex items-center justify-center shadow-md sticky top-0 z-30">
+    <div class="grid grid-cols-[1fr_auto_1fr] items-center w-full">
+      <div></div>
+      <div class="flex items-center justify-center space-x-3">
+        <img src="/assets/telesaver.png" alt="App Logo" class="h-10 w-10 rounded-full shadow-md" />
+        <h1 class="text-2xl font-bold text-center">Telesaver — Messages</h1>
+      </div>
+      <div class="flex justify-end">
+        <button id="openSidebar">
+          <img src="/assets/SideBar.png" alt="Open Sidebar" class="h-9 w-9 shadow-md cursor-pointer hover:scale-105 transition-transform" />
+        </button>
+      </div>
     </div>
   </header>
 
   <!-- Content wrapper -->
   <main class="max-w-4xl w-full mx-auto px-4 py-8">
     <div class="mb-6 flex items-center justify-between">
-      <div>
-        <h2 class="text-2xl font-semibold text-gray-800">
-          Messages from: <span id="sender-name" class="font-bold">Loading...</span>
-        </h2>
-        <p class="text-gray-500 text-sm mt-1">
-          Sender ID: <span id="sender-id">—</span>
-        </p>
-        <p class="text-gray-500 text-sm mt-1">
-          Sender Phone: <span id="sender-phone">—</span>
-        </p>
+      <div class="bg-gradient-to-r from-blue-200 via-purple-100 to-pink-100 rounded-lg px-6 py-3 shadow flex items-center space-x-3">
+        <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8a9 9 0 100-18 9 9 0 000 18z"/></svg>
+        <div>
+          <h2 class="text-2xl font-bold text-gray-800 tracking-wide">
+            Sender: <span id="sender-name" class="font-extrabold text-purple-700 drop-shadow">Loading...</span>
+          </h2>
+          <p class="text-gray-500 text-sm mt-1">
+            Sender ID: <span id="sender-id">—</span>
+          </p>
+          <p class="text-gray-500 text-sm mt-1">
+            Sender Phone: <span id="sender-phone">—</span>
+          </p>
+        </div>
       </div>
-      <a href="/" class="text-blue-600 hover:underline">← Back to senders</a>
-      <a id="download" class="text-blue-600 hover:underline">Download Conversation</a>
+      <div class="flex items-center space-x-4">
+        <button id="download-messages" class="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow transition">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 4v12"/></svg>
+          Download
+        </button>
+        <a href="/" class="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow transition border border-blue-600">← Back to senders</a>
+      </div>
     </div>
 
     <!-- Messages list -->
-    <section id="messages" class="bg-white pb-3 rounded-lg shadow-md">
+    <section id="messages" class="bg-white pb-3 pt-1 rounded-lg shadow-md">
       <div class="p-6 text-gray-500">Loading messages…</div>
+      <div class="p-6 text-gray-500">Loading messages…</div>
+      <!-- Match message view styling -->
+      <!-- Add flex-1, overflow-y-scroll, min-h-0, px-2, pt-2, max-height -->
     </section>
+
   </main>
 
   <script>
@@ -64,7 +85,7 @@
 
     });
 
-    $('#download').on('click', function() {
+    $('#download-messages').on('click', function() {
 
       exportChatAsPDF();
 

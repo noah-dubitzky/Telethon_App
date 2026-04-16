@@ -7,7 +7,7 @@ function collectChatMessages() {
   $('.message').each(function() {
 
     const sender = $(this).find('.sender').text().trim() || '';
-    const text   = $(this).find('.text').text().trim() || '';
+    const text = $(this).find('.text').html()?.replace(/<br\s*\/?>(?!\n)/gi, '\n').replace(/\r?\n/g, '\n').trim() || '';
     const time   = $(this).find('.time').text().trim() || '';
 
     // detect image, video or attachment link inside .media
@@ -70,10 +70,21 @@ async function exportChatAsPDF() {
   for (let i = 0; i < chatMessages.length; i++) {
     const msg = chatMessages[i];
 
-    const line = `[${msg.time}] ${msg.sender}: ${msg.text}`;
-    const splitText = pdf.splitTextToSize(line, contentWidth);
-    pdf.text(splitText, margin, y);
-    y += splitText.length * 7;
+    // Preserve all line breaks in message text
+    const msgLines = msg.text.split(/\r?\n/);
+    let lines = [];
+    if (msgLines.length > 1) {
+      // Multi-line message: prefix only the first line
+      lines = pdf.splitTextToSize(`[${msg.time}] ${msg.sender}: ${msgLines[0]}`, contentWidth);
+      for (let j = 1; j < msgLines.length; j++) {
+        const split = pdf.splitTextToSize(msgLines[j], contentWidth);
+        lines = lines.concat(split);
+      }
+    } else {
+      lines = pdf.splitTextToSize(`[${msg.time}] ${msg.sender}: ${msg.text}`, contentWidth);
+    }
+    pdf.text(lines, margin, y);
+    y += lines.length * 7;
 
     // If there's a media URL and it looks like an image, try to embed it
     if (msg.media && (msg.media.match(/\.png|\.jpg|\.jpeg|\.gif/i) || msg.media.startsWith('data:'))) {

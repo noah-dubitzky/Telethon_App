@@ -69,10 +69,12 @@ function renderMessage(msg){
     var time_sent_12hours = Helpers.convertToNormalTime(msg.sent_at);
 
     if(Helpers.compareDates(msg.sent_at.slice(0,10), latest_sent_date) == 1){
-
-    latest_sent_date = msg.sent_at.slice(0,10);
-    date_header = `<div class="w-full text-center">${latest_sent_date}</div>`;
-
+        latest_sent_date = msg.sent_at.slice(0,10);
+        date_header = `<div class="w-full flex justify-center my-4">
+            <span class="inline-block bg-gradient-to-r from-blue-200 via-purple-100 to-pink-100 text-gray-700 px-4 py-1 rounded-full shadow text-sm font-semibold border border-blue-300">
+                ${latest_sent_date}
+            </span>
+        </div>`;
     }
 
     let mediaHTML = "";
@@ -88,8 +90,8 @@ function renderMessage(msg){
 
     return `
     ${date_header}
-    <article class="message bg-blue-400 rounded-lg p-2 m-3 block ml-auto p-6 border-0" style="width:${mediaWidth}px;">
-        <div class="flex flex-col items-end">
+    <article class="message bg-blue-400 rounded-lg p-2 m-3 block p-6 border-0 shadow-md" style="width:${mediaWidth}px;">
+        <div class="flex flex-col items-start">
             <span class="sender" style="display:none;">${msg.sender_name || ""}</span>
             <div class="media">${mediaHTML}</div>
             <p class="text w-full text-gray-800 whitespace-pre-wrap break-words">${msg.text || ""}</p>

@@ -311,13 +311,14 @@
         }
 
         rows.forEach(m => box.append(renderMessage(m)));
+        
+        scrollMessagesToBottom();
+        // Ensure scroll after images/videos load
+        setTimeout(scrollMessagesToBottom, 300); // fallback for async rendering
+        // Listen for media load events
+        box.find('img,video').on('load loadeddata', function() {
           scrollMessagesToBottom();
-          // Ensure scroll after images/videos load
-          setTimeout(scrollMessagesToBottom, 300); // fallback for async rendering
-          // Listen for media load events
-          box.find('img,video').on('load loadeddata', function() {
-            scrollMessagesToBottom();
-          });
+        });
       } catch (err) {
         $("#messages").html(`<div class="p-6 text-red-500">Failed to load messages.</div>`);
         console.error(err);
