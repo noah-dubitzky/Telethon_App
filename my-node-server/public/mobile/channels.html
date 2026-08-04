@@ -257,12 +257,11 @@
   </section>
 
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="/scripts/jquery-3.0.0.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/scripts/messages_api.js"></script>
   <script src="scripts/index_sidebar.js"></script>
   <script src="/scripts/message_handling_helpers.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="../scripts/Export_As_PDF_Helpers.js"></script>
   <script>
 
@@ -285,7 +284,8 @@
     });
 
     // --- page logic ---
-    $(async function(){
+    $(function(){
+      (async function(){
       const channelId = Helpers.getQueryParam("id");
       const channelName = Helpers.getQueryParam("name");
 
@@ -299,7 +299,8 @@
       $("#channel-name").text(channelName || "—");
 
       try {
-        const rows = await api.getMessagesByChannel(channelId);
+        let offset = 0;
+        const rows = await api.getMessagesByChannel(channelId, offset);
         const channelName = (rows && rows[0] && (rows[0].channel_name || rows[0].channel)) || "";
         $("#channel-name").text(channelName);
 
@@ -310,7 +311,33 @@
           return;
         }
 
-        rows.forEach(m => box.append(renderMessage(m)));
+        let loadedRows = rows.slice().reverse();
+        loadedRows.forEach(m => box.append(renderMessage(m)));
+        offset += rows.length;
+        let isLoading = false;
+        let hasMore = rows.length === 50;
+        async function loadOlderMessages() {
+          if (isLoading || !hasMore) return;
+          isLoading = true;
+          const oldScrollHeight = box[0].scrollHeight;
+          try {
+            const nextRows = await api.getMessagesByChannel(channelId, offset);
+            loadedRows = nextRows.slice().reverse().concat(loadedRows);
+            latest_sent_date = "00-00-0000";
+            box.empty();
+            loadedRows.forEach(m => box.append(renderMessage(m)));
+            offset += nextRows.length;
+            hasMore = nextRows.length === 50;
+            box[0].scrollTop = box[0].scrollHeight - oldScrollHeight;
+          } catch (err) {
+            console.error(err);
+          } finally {
+            isLoading = false;
+          }
+        }
+        box.on('scroll', function () {
+          if (this.scrollTop <= 10) loadOlderMessages();
+        });
         
         scrollMessagesToBottom();
         // Ensure scroll after images/videos load
@@ -323,6 +350,7 @@
         $("#messages").html(`<div class="p-6 text-red-500">Failed to load messages.</div>`);
         console.error(err);
       }
+      })();
 
     });
     

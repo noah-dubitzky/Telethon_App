@@ -9,8 +9,10 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const filtersRouter = require('./routes/filters');
+const pdfExportRouter = require('./routes/pdf.export');
 
 app.use(express.json());
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', function(req, res) {
@@ -19,6 +21,7 @@ app.get('/', function(req, res) {
 app.use(express.static(path.join(__dirname, 'public', 'desktop')));
 
 app.use('/api/filters', filtersRouter);
+app.use('/export', pdfExportRouter);
 
 const getRoutes = require('./routes/messages.get');
 const postRoutes = require('./routes/messages.post');
@@ -35,7 +38,7 @@ app.post('/receive', (req, res) => {
     res.send("Message received and broadcasted to the page!");
 });
 
-const PORT = process.env.PORT || 80;
+const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 server.listen(PORT, HOST, () => {

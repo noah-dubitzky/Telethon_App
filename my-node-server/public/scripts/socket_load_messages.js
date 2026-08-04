@@ -6,8 +6,10 @@ const socket = io();
 
 socket.on('updateMessage', (data) => {
 
-    if(data.channel_name == null && !sender_ids.includes(data.external_sender_id)) {
-        sender_ids.push(data.external_sender_id);
+    const externalSenderId = String(data.sender_id);
+
+    if(data.channel_name == null && !sender_ids.includes(externalSenderId)) {
+        sender_ids.push(externalSenderId);
 
         UpdateNewSender(data);
 
@@ -37,7 +39,7 @@ $(document).ready(function () {
 
             }else{
 
-                sender_ids.push(entity.external_sender_id);
+                sender_ids.push(String(entity.external_sender_id));
                 
                 PrependNewSender(entity);
             }

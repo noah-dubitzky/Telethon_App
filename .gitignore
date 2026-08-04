@@ -1,1 +1,3 @@
 session_name.session
+*.session
+*.session-journal

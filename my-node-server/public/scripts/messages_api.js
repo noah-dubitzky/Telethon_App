@@ -19,13 +19,13 @@ class MessagesAPI {
   }
 
   // ✅ get all messages from a certain sender
-  getMessagesBySender(senderId) {
-    return $.get(`${this.baseUrl}/messages/sender/${senderId}`);
+  getMessagesBySender(senderId, offset = 0) {
+    return $.get(`${this.baseUrl}/messages/sender/${senderId}?offset=${offset}`);
   }
 
   // ✅ get messages from a certain channel (limit 50)
-  getMessagesByChannel(channelId) {
-    return $.get(`${this.baseUrl}/messages/channel/${channelId}`);
+  getMessagesByChannel(channelId, offset = 0) {
+    return $.get(`${this.baseUrl}/messages/channel/${channelId}?offset=${offset}`);
   }
 
   // ✅ post a new message

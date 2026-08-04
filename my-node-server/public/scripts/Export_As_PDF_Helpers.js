@@ -1,137 +1,78 @@
 
-// 🧱 Collect chat messages from the DOM (capture text + media src/href)
-function collectChatMessages() {
 
-  const messages = [];
-
-  $('.message').each(function() {
-
-    const sender = $(this).find('.sender').text().trim() || '';
-    const text = $(this).find('.text').html()?.replace(/<br\s*\/?>(?!\n)/gi, '\n').replace(/\r?\n/g, '\n').trim() || '';
-    const time   = $(this).find('.time').text().trim() || '';
-
-    // detect image, video or attachment link inside .media
-    let media = '';
-    const $media = $(this).find('.media');
-    const $img = $media.find('img');
-    const $video = $media.find('video');
-    const $link = $media.find('a[href]');
-
-    if ($img.length) media = $img.attr('src') || '';
-    else if ($video.length) media = $video.attr('src') || '';
-    else if ($link.length) media = $link.attr('href') || '';
-
-    messages.push({ sender, media, text, time });
-
-  });
-
-  return messages;
-
-}
-
-// helper: load image URL into a data URL (PNG) so jspdf can embed it
-function loadImageDataURL(url) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    img.onload = function() {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const dataUrl = canvas.toDataURL('image/png');
-        resolve({ dataUrl, width: img.naturalWidth, height: img.naturalHeight });
-      } catch (err) {
-        reject(err);
-      }
-    };
-    img.onerror = function(e) { reject(e); };
-    img.src = url;
-  });
-}
-
-// 📄 Export collected messages to PDF (supports embedding PNG/JPG images)
 async function exportChatAsPDF() {
+  const entityId = Helpers.getQueryParam('id');
+  const entityType = /sender\.html$/i.test(window.location.pathname) ? 'sender' : 'channel';
 
-  const chatMessages = collectChatMessages();
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF();
-  let y = 10;
-  const margin = 10;
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const contentWidth = pageWidth - margin * 2;
-
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(12);
-
-  for (let i = 0; i < chatMessages.length; i++) {
-    const msg = chatMessages[i];
-
-    // Preserve all line breaks in message text
-    const msgLines = msg.text.split(/\r?\n/);
-    let lines = [];
-    if (msgLines.length > 1) {
-      // Multi-line message: prefix only the first line
-      lines = pdf.splitTextToSize(`[${msg.time}] ${msg.sender}: ${msgLines[0]}`, contentWidth);
-      for (let j = 1; j < msgLines.length; j++) {
-        const split = pdf.splitTextToSize(msgLines[j], contentWidth);
-        lines = lines.concat(split);
-      }
-    } else {
-      lines = pdf.splitTextToSize(`[${msg.time}] ${msg.sender}: ${msg.text}`, contentWidth);
-    }
-    pdf.text(lines, margin, y);
-    y += lines.length * 7;
-
-    // If there's a media URL and it looks like an image, try to embed it
-    if (msg.media && (msg.media.match(/\.png|\.jpg|\.jpeg|\.gif/i) || msg.media.startsWith('data:'))) {
-      try {
-        let imgData, imgW, imgH;
-
-        if (msg.media.startsWith('data:')) {
-          imgData = msg.media;
-          // can't infer size easily from data URL, use a default max width
-          imgW = contentWidth;
-          imgH = (contentWidth * 0.6);
-        } else {
-          const res = await loadImageDataURL(msg.media);
-          imgData = res.dataUrl;
-          imgW = res.width;
-          imgH = res.height;
-        }
-
-        // scale to content width while preserving aspect ratio, then reduce size
-        const baseScale = Math.min(1, contentWidth / imgW);
-        const REDUCTION_FACTOR = 0.3; // make images smaller (60% of their allowed size)
-        const scale = baseScale * REDUCTION_FACTOR;
-        const displayW = imgW * scale;
-        const displayH = imgH * scale;
-
-        if (y + displayH > pageHeight - margin) {
-          pdf.addPage();
-          y = margin;
-        }
-
-        pdf.addImage(imgData, 'PNG', margin, y, displayW, displayH);
-        y += displayH + 6;
-      } catch (err) {
-        // embedding failed — skip image but continue
-        console.warn('Failed to embed image in PDF:', err);
-      }
-    }
-
-    if (y > pageHeight - margin) { // new page if needed
-      pdf.addPage();
-      y = margin;
-    }
+  if (!entityId) {
+    window.alert(`Cannot export this ${entityType}: its id is missing.`);
+    return;
   }
 
-  pdf.save('chat_export.pdf');
-
+  await exportMessagesWithPuppeteer(entityId, entityType);
 }
 
-// 📦 Attach event handler (works if there's an element with id exportPDF)
+async function exportMessagesWithPuppeteer(entityId, entityType) {
+  const button = document.getElementById('download-messages')
+    || document.getElementById('download-conversation')
+    || document.getElementById('download');
+  const originalText = button ? button.innerHTML : '';
+
+  try {
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = 'Preparing PDF...';
+    }
+
+    const params = new URLSearchParams();
+    params.set('id', entityId);
+    params.set('type', entityType);
+    params.set(
+      'name',
+      document.getElementById(entityType === 'sender' ? 'sender-name' : 'channel-name')?.textContent?.trim()
+        || Helpers.getQueryParam('name')
+        || ''
+    );
+    params.set('view', window.location.pathname.includes('/mobile/') ? 'mobile' : 'desktop');
+    if (entityType === 'sender') {
+      params.set('external_id', Helpers.getQueryParam('external_id') || '');
+      params.set('phone', Helpers.getQueryParam('phone') || '');
+    }
+
+    const response = await fetch(`/export/channel-pdf?${params.toString()}`);
+    if (!response.ok) {
+      const details = await response.text();
+      throw new Error(details || `PDF export failed with status ${response.status}`);
+    }
+
+    const pdfData = await response.arrayBuffer();
+    const signature = new TextDecoder('ascii').decode(pdfData.slice(0, 5));
+    if (signature !== '%PDF-') {
+      throw new Error('The server returned an invalid PDF file.');
+    }
+
+    const blob = new Blob([pdfData], { type: 'application/pdf' });
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const safeName = (params.get('name') || `${entityType}_${entityId}`)
+      .replace(/[<>:"/\\|?*\x00-\x1f]/g, '')
+      .replace(/\s+/g, '_');
+
+    link.href = blobUrl;
+    link.download = `${safeName || `${entityType}_${entityId}`}_messages.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } catch (err) {
+    console.error(`Failed to export ${entityType} PDF:`, err);
+    window.alert(`Failed to export the ${entityType} PDF. Check the server console for details.`);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = originalText;
+    }
+  }
+}
+
 $('#exportPDF').on('click', exportChatAsPDF);

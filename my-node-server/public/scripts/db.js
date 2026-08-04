@@ -14,3 +14,5 @@ const pool = mysql.createPool({
 });
 
 module.exports = pool;
+
+//this database could be changed to messaging_personal later

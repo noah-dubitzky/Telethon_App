@@ -101,6 +101,8 @@ router.get('/channels', async (_req, res) => {
 router.get('/sender/:senderId', async (req, res) => {
   try {
     const senderId = String(req.params.senderId);
+    const limit = 50;
+    const offset = Math.max(parseInt(req.query.offset || '0', 10) || 0, 0);
     const [rows] = await pool.query(
       `SELECT
          m.id AS message_id,
@@ -116,8 +118,9 @@ router.get('/sender/:senderId', async (req, res) => {
        LEFT JOIN channels c  ON m.channel_id = c.id
        LEFT JOIN media md    ON md.message_id = m.id
        WHERE m.sender_id = ?
-       ORDER BY m.id ASC`,
-      [senderId]
+       ORDER BY m.sent_at DESC, m.id DESC
+       LIMIT ? OFFSET ?`,
+      [senderId, limit, offset]
     );
     res.json(rows);
   } catch (err) {
@@ -129,6 +132,8 @@ router.get('/sender/:senderId', async (req, res) => {
 router.get('/channel/:channelId', async (req, res) => {
   try {
     const channelId = req.params.channelId;
+    const limit = 50;
+    const offset = Math.max(parseInt(req.query.offset || '0', 10) || 0, 0);
 
     const [rows] = await pool.query(
       `SELECT
@@ -146,13 +151,13 @@ router.get('/channel/:channelId', async (req, res) => {
        JOIN channels c       ON m.channel_id = c.id
        LEFT JOIN media md    ON md.message_id = m.id
        WHERE c.id = ?
-       ORDER BY m.sent_at ASC, m.id ASC
-       LIMIT 50`,
-      [channelId]
+       ORDER BY m.sent_at DESC, m.id DESC
+       LIMIT ? OFFSET ?`,
+      [channelId, limit, offset]
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({ message: 'No messages found for this channel ID.' });
+      return res.json([]);
     }
 
     res.json(rows);
