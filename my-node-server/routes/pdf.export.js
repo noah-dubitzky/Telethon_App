@@ -210,7 +210,9 @@ router.get('/channel-pdf', async (req, res) => {
           width: 100% !important;
           color: #1f2937 !important;
           font-family: Arial, "Segoe UI", "Telesaver Noto Emoji", sans-serif !important;
-          white-space: pre-wrap !important;
+          white-space: pre-line !important;
+          word-spacing: normal !important;
+          letter-spacing: normal !important;
           overflow-wrap: anywhere !important;
         }
 
