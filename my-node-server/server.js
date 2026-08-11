@@ -18,6 +18,7 @@ const filtersRouter = require('./routes/filters');
 const pdfExportRouter = require('./routes/pdf.export');
 const authRouter = require('./routes/auth');
 const telegramAccountsRouter = require('./routes/telegram-accounts');
+const mediaRouter = require('./routes/media');
 
 const sessionCookieName = 'telesaver.sid';
 const sessionCookieOptions = {
@@ -62,6 +63,8 @@ app.use(session({
   cookie: sessionCookieOptions
 }));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
+// Private uploads must be intercepted before the general public static mount.
+app.use('/uploads', mediaRouter);
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', function(req, res) {

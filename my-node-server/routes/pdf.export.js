@@ -1,5 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const pool = require('../public/scripts/db');
+const requireAuth = require('../middleware/requireAuth');
+const { resolveOwnedAccount } = require('../middleware/archiveOwnership');
+
+router.use(requireAuth);
 
 function sanitizeFilenamePart(value, fallback) {
   const cleaned = String(value || '')
@@ -32,13 +37,27 @@ router.get('/channel-pdf', async (req, res) => {
 
   try {
     const entityId = String(req.query.id || '').trim();
-    const entityName = String(req.query.name || '').trim();
+    let entityName = String(req.query.name || '').trim();
     const entityType = req.query.type === 'sender' ? 'sender' : 'channel';
     const view = req.query.view === 'mobile' ? 'mobile' : 'desktop';
 
     if (!entityId) {
       return res.status(400).json({ error: `Missing ${entityType} id.` });
     }
+
+    const accountId = await resolveOwnedAccount(req, res);
+    if (accountId === undefined) return;
+    const table = entityType === 'sender' ? 'senders' : 'channels';
+    const [ownedEntities] = await pool.query(
+      `SELECT entity.name FROM ${table} entity
+       JOIN telegram_accounts ta ON ta.id = entity.telegram_account_id
+       WHERE entity.id = ? AND ta.user_id = ?${accountId === null ? '' : ' AND entity.telegram_account_id = ?'} LIMIT 1`,
+      accountId === null ? [entityId, req.auth.userId] : [entityId, req.auth.userId, accountId]
+    );
+    if (!ownedEntities[0]) {
+      return res.status(404).json({ error: `${entityType === 'sender' ? 'Sender' : 'Channel'} not found` });
+    }
+    entityName = ownedEntities[0].name || entityName;
 
     const puppeteer = require('puppeteer');
     const pageName = entityType === 'sender' ? 'sender.html' : 'channels.html';
@@ -58,6 +77,9 @@ router.get('/channel-pdf', async (req, res) => {
     });
 
     const page = await browser.newPage();
+    if (req.headers.cookie) {
+      await page.setExtraHTTPHeaders({ cookie: req.headers.cookie });
+    }
     const appHost = req.get('host');
     const intentionallyBlockedRequests = new Set();
 
