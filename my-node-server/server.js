@@ -19,6 +19,7 @@ const pdfExportRouter = require('./routes/pdf.export');
 const authRouter = require('./routes/auth');
 const telegramAccountsRouter = require('./routes/telegram-accounts');
 const mediaRouter = require('./routes/media');
+const telegramConnectRouter = require('./routes/telegram-connect');
 
 const sessionCookieName = 'telesaver.sid';
 const sessionCookieOptions = {
@@ -75,6 +76,7 @@ app.use(express.static(path.join(__dirname, 'public', 'desktop')));
 app.use('/api/filters', filtersRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/telegram-accounts', telegramAccountsRouter);
+app.use('/api/telegram-connect', telegramConnectRouter);
 app.use('/export', pdfExportRouter);
 
 const getRoutes = require('./routes/messages.get');
@@ -82,8 +84,11 @@ const postRoutes = require('./routes/messages.post');
 const filterCheckRoute = require('./routes/filters.check');
 
 app.use(filterCheckRoute);
-app.use('/messages', getRoutes);
+// Keep trusted legacy ingestion ahead of the browser GET router. The GET
+// router applies website-session authentication at router scope and would
+// otherwise intercept the worker's unauthenticated POST before it gets here.
 app.use('/messages', postRoutes);
+app.use('/messages', getRoutes);
 
 app.post('/receive', (req, res) => {
     const lastMessage = req.body;

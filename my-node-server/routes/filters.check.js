@@ -17,9 +17,7 @@ router.post('/filters/check', async (req, res) => {
   }
 });
 
-router.use(requireAuth);
-
-router.get('/filters/list', async (req, res) => {
+router.get('/filters/list', requireAuth, async (req, res) => {
   try {
     const accountId = await resolveOwnedAccount(req, res);
     if (accountId === undefined) return;
@@ -47,7 +45,7 @@ function tableFor(filterType) {
   return null;
 }
 
-router.post('/filters/update', async (req, res) => {
+router.post('/filters/update', requireAuth, async (req, res) => {
   try {
     const { id, filterType, mode } = req.body;
     const table = tableFor(filterType);
@@ -63,7 +61,7 @@ router.post('/filters/update', async (req, res) => {
   }
 });
 
-router.post('/filters/create', async (req, res) => {
+router.post('/filters/create', requireAuth, async (req, res) => {
   try {
     const { filterType, identifier, mode, note } = req.body;
     if (!tableFor(filterType) || !identifier || !['allow', 'deny'].includes(mode)) return res.status(400).json({ error: 'Invalid filter fields' });
@@ -81,7 +79,7 @@ router.post('/filters/create', async (req, res) => {
   }
 });
 
-router.post('/filters/delete', async (req, res) => {
+router.post('/filters/delete', requireAuth, async (req, res) => {
   try {
     const { id, filterType } = req.body;
     const table = tableFor(filterType);
