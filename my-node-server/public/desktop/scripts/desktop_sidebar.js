@@ -20,7 +20,8 @@ $(function () {
             <div class="p-4 space-y-2">
               <a href="filters.html" class="block p-3 rounded-lg hover:bg-gray-100">Filters</a>
               <a href="index.html" class="block p-3 rounded-lg hover:bg-gray-100">Messages</a>
-              <a href="#" class="block p-3 rounded-lg hover:bg-gray-100">Settings</a>
+              <a href="/settings.html" class="block p-3 rounded-lg hover:bg-gray-100">Telegram account / Settings</a>
+              <button data-logout class="block w-full text-left p-3 rounded-lg text-red-600 hover:bg-red-50">Log out</button>
             </div>
           </aside>
         `);

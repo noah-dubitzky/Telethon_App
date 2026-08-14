@@ -6,6 +6,7 @@
   <title>Telegram Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="../scripts/session_guard.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="scripts/desktop_sidebar.js"></script>
   <script src="../scripts/socket_load_messages.js"></script>
@@ -44,7 +45,7 @@
 
   <!-- User Info -->
   <section class="text-center mt-8">
-    <h2 class="text-2xl font-semibold text-gray-800">Welcome, <span id="username" class="font-bold">Noah Dubitzky</span></h2>
+    <h2 class="text-2xl font-semibold text-gray-800">Welcome, <span id="username" class="font-bold">Loading…</span></h2>
   </section>
 
   <!-- Senders List -->
