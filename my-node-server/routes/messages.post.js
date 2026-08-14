@@ -3,9 +3,10 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../public/scripts/db');
 const { isMessageAllowed } = require('../public/utils/filterRules');
+const requireWorker = require('../middleware/requireWorker');
 
 // POST /messages
-router.post('/', async (req, res) => {
+router.post('/', requireWorker, async (req, res) => {
   const {
     sender_name,
     timestamp,
@@ -13,13 +14,21 @@ router.post('/', async (req, res) => {
     sender_id,
     text,
     media_path,
-    channel_name
+    channel_name,
+    channel_id,
+    telegram_account_id,
+    telegram_chat_id,
+    telegram_message_id
   } = req.body || {};
+
+  const accountId = Number(telegram_account_id);
+  if (!Number.isSafeInteger(accountId) || accountId <= 0) return res.status(400).json({ error: 'telegram_account_id is required' });
 
   const allowed = await isMessageAllowed({
     external_sender_id: sender_id,
     sender_name: sender_name,
-    channel_key: channel_name
+    channel_key: channel_name,
+    telegram_account_id: accountId
   });
 
   if (!allowed) {
@@ -48,13 +57,13 @@ router.post('/', async (req, res) => {
 
       // sender
       await conn.execute(
-        `INSERT INTO senders (external_sender_id, name, phone)
-        VALUES (?, ?, ?)
+        `INSERT INTO senders (telegram_account_id, external_sender_id, name, phone)
+        VALUES (?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
           name = VALUES(name),
           phone = VALUES(phone),
           id = LAST_INSERT_ID(id)`,
-        [String(sender_id), sender_name || null, sender_phone || null]
+        [accountId, String(sender_id), sender_name || null, sender_phone || null]
       );
       const [[senderRow]] = await conn.query('SELECT LAST_INSERT_ID() AS id');
       senderPk = senderRow.id;
@@ -65,10 +74,10 @@ router.post('/', async (req, res) => {
     let channelPk = null;
     if (channel_name) {
       await conn.execute(
-        `INSERT INTO channels (name)
-         VALUES (?)
-         ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`,
-        [channel_name]
+        `INSERT INTO channels (telegram_account_id, telegram_chat_id, name)
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE name = VALUES(name), id = LAST_INSERT_ID(id)`,
+        [accountId, telegram_chat_id || channel_id || null, channel_name]
       );
       const [[channelRow]] = await conn.query('SELECT LAST_INSERT_ID() AS id');
       channelPk = channelRow.id;
@@ -76,9 +85,11 @@ router.post('/', async (req, res) => {
 
     // message
     const [msgRes] = await conn.execute(
-      `INSERT INTO messages (sender_id, channel_id, sent_at, text)
-       VALUES (?, ?, ?, ?)`,
-      [senderPk, channelPk, sentAtStr, text || null]
+      `INSERT INTO messages (telegram_account_id, telegram_chat_id, telegram_message_id, sender_id, channel_id, sent_at, text)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE sender_id = VALUES(sender_id), channel_id = VALUES(channel_id),
+         sent_at = VALUES(sent_at), text = VALUES(text), id = LAST_INSERT_ID(id)`,
+      [accountId, telegram_chat_id || null, telegram_message_id || null, senderPk, channelPk, sentAtStr, text || null]
     );
     const messagePk = msgRes.insertId;
 

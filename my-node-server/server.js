@@ -20,6 +20,7 @@ const authRouter = require('./routes/auth');
 const telegramAccountsRouter = require('./routes/telegram-accounts');
 const mediaRouter = require('./routes/media');
 const telegramConnectRouter = require('./routes/telegram-connect');
+const workerInternalRouter = require('./routes/worker.internal');
 
 const sessionCookieName = 'telesaver.sid';
 const sessionCookieOptions = {
@@ -77,6 +78,7 @@ app.use('/api/filters', filtersRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/telegram-accounts', telegramAccountsRouter);
 app.use('/api/telegram-connect', telegramConnectRouter);
+app.use('/internal/worker', workerInternalRouter);
 app.use('/export', pdfExportRouter);
 
 const getRoutes = require('./routes/messages.get');

@@ -5,6 +5,7 @@ const requireAuth = require('../middleware/requireAuth');
 const telegramAuthRateLimit = require('../middleware/telegramAuthRateLimit');
 const { encryptSecret, decryptSecret } = require('../security/sessionEncryption');
 const { callTelegramAuth } = require('../services/telegramAuthClient');
+const { controlAccount } = require('../services/telegramWorkerClient');
 
 const router = express.Router();
 const ATTEMPT_TTL_MINUTES = 10;
@@ -106,6 +107,14 @@ async function finalizeConnection(userId, attempt, result) {
   }
 }
 
+async function startWorkerAccount(account) {
+  try {
+    await controlAccount('start', account.id);
+  } catch (error) {
+    console.error(`Telegram worker start deferred: account=${account.id} reason=${error.code || 'unavailable'}`);
+  }
+}
+
 router.post('/start', telegramAuthRateLimit('start'), async (req, res) => {
   const phoneNumber = typeof req.body?.phone_number === 'string' ? req.body.phone_number.replace(/[\s()-]/g, '') : '';
   if (!PHONE_PATTERN.test(phoneNumber)) return res.status(400).json({ error: 'A valid international phone number is required' });
@@ -153,6 +162,7 @@ router.post('/verify-code', telegramAuthRateLimit('code'), async (req, res) => {
       return res.json({ attempt_id: attempt.id, status: 'password_required' });
     }
     const account = await finalizeConnection(req.auth.userId, attempt, result);
+    await startWorkerAccount(account);
     console.log(`Telegram account connected: user=${req.auth.userId} attempt=${attempt.id} account=${account.id}`);
     return res.json({ status: 'connected', account });
   } catch (error) {
@@ -168,13 +178,13 @@ router.post('/verify-password', telegramAuthRateLimit('password'), async (req, r
   try {
     const attempt = await ownedAttempt(req, res);
     if (!attempt) return;
-    if (attempt.status !== 'code_sent') return res.status(409).json({ error: 'Telegram verification code is not expected for this attempt' });
     if (attempt.status !== 'password_required') return res.status(409).json({ error: 'Telegram password is not required for this attempt' });
     const result = await callTelegramAuth('verify-password', {
       temporary_session: decryptSecret(attempt.temporary_session_ciphertext, attempt.session_key_version),
       password
     });
     const account = await finalizeConnection(req.auth.userId, attempt, result);
+    await startWorkerAccount(account);
     console.log(`Telegram account connected: user=${req.auth.userId} attempt=${attempt.id} account=${account.id}`);
     return res.json({ status: 'connected', account });
   } catch (error) {

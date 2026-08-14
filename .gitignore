@@ -1,3 +1,6 @@
 session_name.session
 *.session
 *.session-journal
+.env
+__pycache__/
+my-node-server/public/uploads/[0-9]*/
