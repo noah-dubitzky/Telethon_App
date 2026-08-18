@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node test/sessionEncryption.test.js && node test/frontendStep6.test.js && node test/frontendStep7.test.js"
+    "test": "node test/sessionEncryption.test.js && node test/frontendStep6.test.js && node test/frontendStep7.test.js && node test/backendStep8.test.js"
   },
   "keywords": [],
   "author": "",
