@@ -3,14 +3,20 @@ class MessagesAPI {
     this.baseUrl = baseUrl; // keep empty if your API is on the same origin
   }
 
+  accountQuery(accountId, extra = {}) {
+    const params = new URLSearchParams(extra);
+    if (accountId) params.set('telegram_account_id', accountId);
+    return params.toString();
+  }
+
   // ✅ get all senders (with channel_id IS NULL)
-  getSenders() {
-    return $.get(`${this.baseUrl}/messages/senders`);
+  getSenders(accountId = null) {
+    return $.get(`${this.baseUrl}/messages/senders?${this.accountQuery(accountId)}`);
   }
 
   // ✅ get all channels
-  getChannels() {
-    return $.get(`${this.baseUrl}/messages/channels`);
+  getChannels(accountId = null) {
+    return $.get(`${this.baseUrl}/messages/channels?${this.accountQuery(accountId)}`);
   }
 
   // ✅ get latest messages (default limit=50)
@@ -19,13 +25,13 @@ class MessagesAPI {
   }
 
   // ✅ get all messages from a certain sender
-  getMessagesBySender(senderId, offset = 0) {
-    return $.get(`${this.baseUrl}/messages/sender/${senderId}?offset=${offset}`);
+  getMessagesBySender(senderId, offset = 0, accountId = null) {
+    return $.get(`${this.baseUrl}/messages/sender/${senderId}?${this.accountQuery(accountId, { offset })}`);
   }
 
   // ✅ get messages from a certain channel (limit 50)
-  getMessagesByChannel(channelId, offset = 0) {
-    return $.get(`${this.baseUrl}/messages/channel/${channelId}?offset=${offset}`);
+  getMessagesByChannel(channelId, offset = 0, accountId = null) {
+    return $.get(`${this.baseUrl}/messages/channel/${channelId}?${this.accountQuery(accountId, { offset })}`);
   }
 
   // ✅ post a new message

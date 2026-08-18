@@ -34,6 +34,7 @@ async function exportMessagesWithPuppeteer(entityId, entityType) {
         || ''
     );
     params.set('view', window.location.pathname.includes('/mobile/') ? 'mobile' : 'desktop');
+    params.set('telegram_account_id', Helpers.getQueryParam('telegram_account_id') || '');
     if (entityType === 'sender') {
       params.set('external_id', Helpers.getQueryParam('external_id') || '');
       params.set('phone', Helpers.getQueryParam('phone') || '');

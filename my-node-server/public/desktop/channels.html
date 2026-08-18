@@ -46,7 +46,7 @@
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 4v12"/></svg>
           Download
         </button>
-        <a href="/desktop/index.html" class="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow transition border border-blue-600">← Back to senders</a>
+        <a id="account-back-link" href="/desktop/index.html" class="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow transition border border-blue-600">← Back to account</a>
       </div>
     </div>
 
@@ -70,7 +70,7 @@
 
       data.sent_at = data.timestamp;
 
-      if(data.sender_id == Helpers.getQueryParam("external_id")) {
+      if(String(data.telegram_account_id) === String(Helpers.getQueryParam("telegram_account_id")) && data.channel_name == Helpers.getQueryParam("name")) {
         window.alert("Message Added");
         updateNewMessages(data);
         scrollMessagesToBottom();
@@ -82,20 +82,23 @@
     $(function(){
       (async function(){
       const channelId = Helpers.getQueryParam("id");
+      const accountId = Helpers.getQueryParam("telegram_account_id");
       const channelName = Helpers.getQueryParam("name");
 
       const api = new MessagesAPI(); // our global API helper
 
-      if(!channelId){
-        $("#messages").html(`<div class="p-6 text-red-500">Missing sender id.</div>`);
+      if(!channelId || !accountId){
+        $("#messages").html(`<div class="p-6 text-red-500">Missing channel or Telegram account id.</div>`);
         return;
       }
+
+      $("#account-back-link").attr("href", `/desktop/index.html?telegram_account_id=${encodeURIComponent(accountId)}`);
 
       $("#channel-name").text(channelName || "—");
 
       try {
         let offset = 0;
-        const rows = await api.getMessagesByChannel(channelId, offset);
+        const rows = await api.getMessagesByChannel(channelId, offset, accountId);
         const channelName = (rows && rows[0] && (rows[0].channel_name || rows[0].channel)) || "";
         $("#channel-name").text(channelName);
 
@@ -117,7 +120,7 @@
           isLoading = true;
           const oldScrollHeight = box[0].scrollHeight;
           try {
-            const nextRows = await api.getMessagesByChannel(channelId, offset);
+            const nextRows = await api.getMessagesByChannel(channelId, offset, accountId);
             loadedRows = nextRows.slice().reverse().concat(loadedRows);
             latest_sent_date = "00-00-0000";
             box.empty();

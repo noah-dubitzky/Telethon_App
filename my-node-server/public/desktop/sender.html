@@ -54,7 +54,7 @@
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 4v12"/></svg>
           Download
         </button>
-        <a href="/desktop/index.html" class="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow transition border border-blue-600">← Back to senders</a>
+        <a id="account-back-link" href="/desktop/index.html" class="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow transition border border-blue-600">← Back to account</a>
       </div>
     </div>
 
@@ -78,7 +78,7 @@
 
       data.sent_at = data.timestamp;
 
-      if(data.sender_id == Helpers.getQueryParam("external_id")) {
+      if(String(data.telegram_account_id) === String(Helpers.getQueryParam("telegram_account_id")) && data.sender_id == Helpers.getQueryParam("external_id")) {
         window.alert("Message Added");
         updateNewMessages(data);
       }
@@ -96,22 +96,25 @@
       (async function(){
       
       const senderId = Helpers.getQueryParam("id");
+      const accountId = Helpers.getQueryParam("telegram_account_id");
       const senderPhone = Helpers.getQueryParam("phone");
       const external_id = Helpers.getQueryParam("external_id");
 
       const api = new MessagesAPI(); // our global API helper
 
-      if(!senderId){
-        $("#messages").html(`<div class="p-6 text-red-500">Missing sender id.</div>`);
+      if(!senderId || !accountId){
+        $("#messages").html(`<div class="p-6 text-red-500">Missing sender or Telegram account id.</div>`);
         return;
       }
+
+      $("#account-back-link").attr("href", `/desktop/index.html?telegram_account_id=${encodeURIComponent(accountId)}`);
 
       $("#sender-id").text(external_id);
       $("#sender-phone").text(senderPhone || "—");
 
       try {
         let offset = 0;
-        const rows = await api.getMessagesBySender(senderId, offset);
+        const rows = await api.getMessagesBySender(senderId, offset, accountId);
         const senderName = (rows && rows[0] && (rows[0].sender_name || rows[0].sender)) || "";
         $("#sender-name").text(senderName);
 
@@ -133,7 +136,7 @@
           isLoading = true;
           const oldScrollHeight = box[0].scrollHeight;
           try {
-            const nextRows = await api.getMessagesBySender(senderId, offset);
+            const nextRows = await api.getMessagesBySender(senderId, offset, accountId);
             loadedRows = nextRows.slice().reverse().concat(loadedRows);
             latest_sent_date = "00-00-0000";
             box.empty();
