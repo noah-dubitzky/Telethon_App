@@ -6,6 +6,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 const session = require('express-session');
 const MySQLSessionStore = require('express-mysql-session')(session);
+const { createRealtime } = require('./services/realtime');
 
 if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
   throw new Error('SESSION_SECRET must be set to at least 32 characters');
@@ -47,7 +48,7 @@ const sessionStore = process.env.NODE_ENV === 'production'
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME || 'messaging_personal'
     })
-  : undefined;
+  : new session.MemoryStore();
 
 if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
@@ -56,14 +57,16 @@ app.locals.sessionCookieName = sessionCookieName;
 app.locals.sessionCookieClearOptions = sessionCookieClearOptions;
 
 app.use(express.json());
-app.use(session({
+const sessionMiddleware = session({
   name: sessionCookieName,
   secret: process.env.SESSION_SECRET,
   store: sessionStore,
   resave: false,
   saveUninitialized: false,
   cookie: sessionCookieOptions
-}));
+});
+app.use(sessionMiddleware);
+app.locals.realtime = createRealtime({ io, sessionMiddleware, sessionStore });
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 // Private uploads must be intercepted before the general public static mount.
 app.use('/uploads', mediaRouter);
@@ -91,13 +94,6 @@ app.use(filterCheckRoute);
 // otherwise intercept the worker's unauthenticated POST before it gets here.
 app.use('/messages', postRoutes);
 app.use('/messages', getRoutes);
-
-app.post('/receive', (req, res) => {
-    const lastMessage = req.body;
-    console.log('Received Data:', lastMessage);
-    io.emit('updateMessage', lastMessage);
-    res.send("Message received and broadcasted to the page!");
-});
 
 const PORT = process.env.PORT || 80;
 const HOST = process.env.HOST || '0.0.0.0';

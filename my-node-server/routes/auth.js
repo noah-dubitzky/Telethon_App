@@ -110,12 +110,18 @@ router.post('/logout', (req, res) => {
     return res.json({ ok: true });
   }
 
+  const sessionId = req.sessionID;
   return req.session.destroy((error) => {
     if (error) {
       console.error('Logout failed: session destruction error');
       return res.status(500).json({ error: 'Unable to log out' });
     }
     res.clearCookie(req.app.locals.sessionCookieName, req.app.locals.sessionCookieClearOptions);
+    if (req.app.locals.realtime) {
+      req.app.locals.realtime.disconnectSession(sessionId).catch(() => {
+        console.error('Logout socket disconnect failed');
+      });
+    }
     return res.json({ ok: true });
   });
 });

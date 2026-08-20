@@ -263,22 +263,11 @@
   <script src="/scripts/messages_api.js"></script>
   <script src="scripts/index_sidebar.js"></script>
   <script src="/scripts/message_handling_helpers.js"></script>
+  <script defer src="/scripts/socket_load_messages.js"></script>
   <script src="../scripts/Export_As_PDF_Helpers.js"></script>
   <script>
 
     latest_sent_date = "00-00-0000";
-
-    const socket = io();
-
-    socket.on('updateMessage', (data) => {
-      data.sent_at = data.timestamp;
-      if(String(data.telegram_account_id) === String(Helpers.getQueryParam("telegram_account_id")) && data.channel_name == Helpers.getQueryParam("name")) {
-        window.alert("Message Added");
-        updateNewMessages(data);
-        scrollMessagesToBottom();
-      }
-    });
-
 
     $('#download-conversation').on('click', function() {
       exportChatAsPDF();

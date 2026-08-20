@@ -1,96 +1,69 @@
-// Detect device type
-let deviceType = (/Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent)) ? "mobile" : "desktop";
-sender_ids = [];
-channel_ids = [];
-const socket = io();
+(function ($) {
+  'use strict';
 
-socket.on('updateMessage', (data) => {
+  if (typeof io !== 'function' || typeof MessagesAPI !== 'function') return;
 
-    const externalSenderId = String(data.sender_id);
+  const params = new URLSearchParams(window.location.search);
+  const accountId = params.get('telegram_account_id');
+  const entityId = params.get('id');
+  const externalSenderId = params.get('external_id');
+  const channelName = params.get('name');
+  const isSenderPage = /\/sender\.html$/i.test(window.location.pathname);
+  const isChannelPage = /\/channels\.html$/i.test(window.location.pathname);
 
-    if(data.channel_name == null && !sender_ids.includes(externalSenderId)) {
-        sender_ids.push(externalSenderId);
+  if (!accountId || !entityId || (!isSenderPage && !isChannelPage)) return;
 
-        UpdateNewSender(data);
+  const api = new MessagesAPI();
+  const socket = io();
+  let refreshInProgress = false;
+  let refreshRequested = false;
 
-        window.alert("new sender added");
-
+  function eventMatchesOpenPage(data) {
+    if (String(data.telegram_account_id) !== String(accountId)) return false;
+    if (isSenderPage) {
+      return data.sender_database_id != null
+        ? String(data.sender_database_id) === String(entityId)
+        : data.sender_id != null && String(data.sender_id) === String(externalSenderId);
     }
+    return data.channel_database_id != null
+      ? String(data.channel_database_id) === String(entityId)
+      : data.channel_name != null && String(data.channel_name) === String(channelName);
+  }
 
-});
+  async function reloadOpenConversation() {
+    if (refreshInProgress) {
+      refreshRequested = true;
+      return;
+    }
+    refreshInProgress = true;
+    try {
+      const rows = isSenderPage
+        ? await api.getMessagesBySender(entityId, 0, accountId)
+        : await api.getMessagesByChannel(entityId, 0, accountId);
+      const box = $('#messages');
+      latest_sent_date = '00-00-0000';
+      box.empty();
+      if (!rows || rows.length === 0) {
+        box.html('<div class="p-6 text-gray-500">No messages found.</div>');
+      } else {
+        rows.slice().reverse().forEach(function (message) {
+          box.append(renderMessage(message));
+        });
+        scrollMessagesToBottom();
+        setTimeout(scrollMessagesToBottom, 300);
+      }
+    } catch (_error) {
+      console.error('Unable to reload live messages');
+    } finally {
+      refreshInProgress = false;
+      if (refreshRequested) {
+        refreshRequested = false;
+        reloadOpenConversation();
+      }
+    }
+  }
 
-$(document).ready(function () {
-
-    const container = $("#senders-container");
-    container.empty();
-
-    $.get("/messages/entities", function (data) {
-
-        if (data.length === 0) {
-            container.append("<p id='no_sender_found' class='text-gray-500'>No senders or channles found.</p>");
-        } else {
-            data.forEach(entity => {
-
-            if(entity.entity_type === "channel"){
-
-                channel_ids.push(entity.id);
-
-                PrependNewChannel(entity);
-
-            }else{
-
-                sender_ids.push(String(entity.external_sender_id));
-                
-                PrependNewSender(entity);
-            }
-            });
-        }
-
-    }).fail(function (xhr) {
-
-        $("#senders-container").html("<p class='text-red-500'>Failed to load channels and senders: " + xhr.responseText + "</p>");
-   
-    });
-
-
-});
-
-UpdateNewSender = (sender) => {
-
-    $.get("/messages/senders/" + sender.sender_id, function (data) {
-
-        PrependNewSender(data);
-        $("#no_senders_found").remove();
-    
-    }).fail(function (xhr) {
-        
-        console.error("❌ Error:", xhr.responseText);
-        alert("Error: " + xhr.responseText);
-    });
-
-    
-
-}
-
-PrependNewSender = (sender) => {
-    let senderPage = deviceType === "mobile" ? "/mobile/sender.html" : "/sender.html";
-    $("#senders-container").prepend(
-    `<div class="py-3 hover:bg-gray-50 transition">
-        <a href="${senderPage}?id=${sender.id}&external_id=${sender.external_sender_id}&phone=${sender.phone}" class="flex items-center text-blue-600 hover:underline">
-        <span class="font-medium">${sender.name}</span>
-        ${sender.external_sender_id ? `<span class="ml-2 text-gray-500 text-sm">(${sender.external_sender_id})</span>` : ""}
-        </a>
-    </div>`
-    );
-}
-
-PrependNewChannel = (channel) => {
-    let channelPage = deviceType === "mobile" ? "/mobile/channels.html" : "/channels.html";
-    $("#senders-container").prepend(
-    `<div class="py-3 hover:bg-gray-50 transition">
-        <a href="${channelPage}?id=${channel.id}&name=${(channel.name)}" class="flex items-center text-green-600 hover:underline">
-        <span class="font-medium">${channel.name}</span>      
-        </a>
-    </div>`
-    );
-}
+  socket.on('updateMessage', function (data) {
+    if (eventMatchesOpenPage(data || {})) reloadOpenConversation();
+  });
+})(jQuery);

@@ -105,12 +105,45 @@ router.post('/', requireWorker, async (req, res) => {
 
     await conn.commit();
 
-    res.status(201).json({
+    const responsePayload = {
       message_id: messagePk,
       sender_id: senderPk,
       channel_id: channelPk,
       sent_at: sentAtStr
-    });
+    };
+    res.status(201).json(responsePayload);
+
+    // Persistence is complete before any optional live delivery work begins.
+    try {
+      const [owners] = await pool.execute(
+        'SELECT user_id FROM telegram_accounts WHERE id = ? LIMIT 1',
+        [accountId]
+      );
+      if (!owners[0]) {
+        console.warn(`Socket ownership lookup failed: account=${accountId}`);
+      } else if (req.app.locals.realtime) {
+        const livePayload = {
+          telegram_account_id: accountId,
+          telegram_message_id: telegram_message_id || null,
+          telegram_chat_id: telegram_chat_id || null,
+          message_id: messagePk,
+          sender_database_id: senderPk,
+          channel_database_id: channelPk,
+          sender_name: sender_name || null,
+          sender_phone: sender_phone || null,
+          sender_id: sender_id || null,
+          channel_name: channel_name || null,
+          channel_id: channel_id || null,
+          text: text || null,
+          media_path: media_path || null,
+          timestamp: sentAtStr,
+          sent_at: sentAtStr
+        };
+        await req.app.locals.realtime.emitToUser(owners[0].user_id, 'updateMessage', livePayload);
+      }
+    } catch (emitError) {
+      console.error(`Socket delivery failed after archive: account=${accountId} reason=${emitError.code || 'unknown'}`);
+    }
   } catch (err) {
     await conn.rollback();
     res.status(500).json({ error: 'Database error', details: err.message });
