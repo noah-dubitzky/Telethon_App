@@ -45,12 +45,14 @@
 
       <section class="bg-white rounded-2xl shadow p-5 sm:p-7">
         <h2 class="text-xl font-bold">Account controls</h2>
-        <p class="text-slate-500 mt-1">Additional account controls will be available in a future update.</p>
+        <p id="archiveStateText" class="text-slate-500 mt-1"></p>
+        <div id="controlMessage" class="hidden mt-4 rounded-xl p-3 text-sm" role="alert"></div>
         <div class="flex flex-wrap gap-3 mt-5">
-          <button disabled class="rounded-xl border px-4 py-3 text-slate-400 cursor-not-allowed">Reconnect</button>
-          <button disabled class="rounded-xl border px-4 py-3 text-slate-400 cursor-not-allowed">Disconnect</button>
-          <button disabled class="rounded-xl border px-4 py-3 text-slate-400 cursor-not-allowed">Pause archiving</button>
-          <button disabled class="rounded-xl border border-red-200 px-4 py-3 text-red-300 cursor-not-allowed">Remove account</button>
+          <button id="reconnectAccount" class="rounded-xl border px-4 py-3 hover:bg-slate-50">Reconnect</button>
+          <button id="disconnectAccount" class="rounded-xl border px-4 py-3 hover:bg-slate-50">Disconnect</button>
+          <button id="toggleArchive" class="rounded-xl border px-4 py-3 hover:bg-slate-50">Pause archiving</button>
+          <a id="reauthenticateAccount" class="rounded-xl border px-4 py-3 hover:bg-slate-50" href="/settings.html">Re-authenticate</a>
+          <button id="removeAccount" class="rounded-xl border border-red-300 px-4 py-3 text-red-700 hover:bg-red-50">Remove connection</button>
         </div>
       </section>
 

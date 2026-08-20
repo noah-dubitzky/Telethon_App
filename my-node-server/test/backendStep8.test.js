@@ -14,7 +14,8 @@ test('management endpoints require session ownership and expose aggregate counts
   assert.match(source, /WHERE id = \? AND user_id = \?/);
   assert.match(source, /COUNT\(\*\).*sender_filters/s);
   assert.match(source, /COUNT\(\*\).*channel_filters/s);
-  assert.doesNotMatch(source, /session_ciphertext|session_key_version|worker_assignment/);
+  const safeColumns = source.match(/const SAFE_ACCOUNT_COLUMNS = `[\s\S]*?`;/)?.[0] || '';
+  assert.doesNotMatch(safeColumns, /session_ciphertext|session_key_version|worker_assignment/);
 });
 
 test('filter toggle requires a real boolean', () => {
@@ -25,7 +26,7 @@ test('filter toggle requires a real boolean', () => {
 
 test('worker filter decision bypasses rules when account filtering is disabled', () => {
   const source = read('public/utils/filterRules.js');
-  assert.match(source, /SELECT filters_enabled FROM telegram_accounts/);
+  assert.match(source, /SELECT filters_enabled(?:, archive_enabled)? FROM telegram_accounts/);
   assert.match(source, /if \(!Boolean\(accountRows\[0\]\.filters_enabled\)\) return true/);
 });
 

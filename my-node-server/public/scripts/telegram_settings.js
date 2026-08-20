@@ -2,6 +2,8 @@
   'use strict';
 
   let attemptId = null;
+  const reauthenticateAccountId = new URLSearchParams(window.location.search)
+    .get('reauthenticate_account_id');
 
   const dashboard = /Mobi|Android|iPhone|iPad|iPod/i.test(
     navigator.userAgent
@@ -111,7 +113,7 @@
         }
 
         $('#connectButton')
-          .removeClass('hidden')
+          .toggleClass('hidden', Boolean(reauthenticateAccountId))
           .text(
             data.accounts.length
               ? 'Connect another Telegram account'
@@ -128,16 +130,32 @@
       });
   }
 
-  function connected() {
+  function connected(data) {
     attemptId = null;
     $('#connectFlow').addClass('hidden');
     notice('Telegram is connected.', false);
+    if (reauthenticateAccountId && String(data?.account?.id) === reauthenticateAccountId) {
+      window.location.replace(
+        `/manage-account.html?telegram_account_id=${encodeURIComponent(reauthenticateAccountId)}`
+      );
+      return;
+    }
+    if (reauthenticateAccountId && data?.account) {
+      notice('That was a different Telegram account. Re-authenticate with the account you selected.');
+    }
     loadAccounts();
   }
 
   $(function () {
     $('#dashboardLink').attr('href', dashboard);
     loadAccounts();
+
+    if (/^\d+$/.test(reauthenticateAccountId || '') && reauthenticateAccountId !== '0') {
+      $('#connectButton').addClass('hidden');
+      $('#connectFlow').removeClass('hidden');
+      showStep('#phoneForm');
+      notice('Sign in to the same Telegram account to replace its saved connection.', false);
+    }
 
     $('#connectButton').on('click', function () {
       $(this).addClass('hidden');
@@ -193,7 +211,7 @@
           if (data.status === 'password_required') {
             showStep('#passwordForm');
           } else {
-            connected();
+            connected(data);
           }
         })
         .fail(function (xhr) {

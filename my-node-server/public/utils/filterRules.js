@@ -21,10 +21,13 @@ async function isMessageAllowed({ telegram_account_id, external_sender_id, sende
     }
     if (!accountId) throw new Error('No trusted Telegram account was resolved');
     const [accountRows] = await pool.query(
-      'SELECT filters_enabled FROM telegram_accounts WHERE id = ? LIMIT 1',
+      'SELECT filters_enabled, archive_enabled FROM telegram_accounts WHERE id = ? LIMIT 1',
       [accountId]
     );
     if (!accountRows[0]) throw new Error('Telegram account was not found');
+    // Archive pause is checked for every incoming event, so it takes effect
+    // without restarting the Python worker.
+    if (!Boolean(accountRows[0].archive_enabled)) return false;
     // OFF means bypass all allow/deny rows and preserve the archive-by-default
     // behavior by accepting the event.
     if (!Boolean(accountRows[0].filters_enabled)) return true;

@@ -4,6 +4,7 @@
   const params = new URLSearchParams(window.location.search);
   const accountId = params.get('telegram_account_id');
   const mobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  let currentAccount = null;
 
   function validAccountId(value) {
     return /^\d+$/.test(value || '') && value !== '0';
@@ -28,7 +29,41 @@
     }
     if (xhr.status === 0) return 'The server is unavailable. Please try again.';
     if (xhr.status === 404) return 'Telegram account not found or unavailable.';
-    return fallback;
+    return xhr.responseJSON?.error || fallback;
+  }
+
+  function controlMessage(message, error) {
+    $('#controlMessage')
+      .removeClass('hidden bg-red-50 text-red-700 bg-green-50 text-green-700')
+      .addClass(error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700')
+      .text(message);
+  }
+
+  function setControlsPending(pending) {
+    $('#reconnectAccount, #disconnectAccount, #toggleArchive, #removeAccount')
+      .prop('disabled', pending);
+  }
+
+  function updateAccountControls(account) {
+    currentAccount = account;
+    const removed = account.connection_status === 'removed' || !account.has_saved_session;
+    const connected = account.connection_status === 'connected';
+
+    $('#reconnectAccount').prop('disabled', removed || connected);
+    $('#disconnectAccount').prop('disabled', removed || !connected);
+    $('#toggleArchive')
+      .prop('disabled', removed)
+      .text(account.archive_enabled ? 'Pause archiving' : 'Resume archiving');
+    $('#removeAccount').prop('disabled', removed);
+    $('#archiveStateText').text(removed
+      ? 'The saved connection was removed. Archived data is still available.'
+      : account.archive_enabled
+        ? 'New Telegram messages are being archived.'
+        : 'Archiving is paused; new Telegram messages will not be saved.');
+    $('#reauthenticateAccount').attr(
+      'href',
+      `/settings.html?reauthenticate_account_id=${encodeURIComponent(accountId)}`
+    );
   }
 
   function updateFilterState(enabled) {
@@ -58,6 +93,7 @@
     $('#allowedChannels').text(data.filters.channels.allowed);
     $('#blockedChannels').text(data.filters.channels.blocked);
     updateFilterState(data.filters.enabled);
+    updateAccountControls(account);
 
     const filterPath = mobile ? '/mobile/filters.html' : '/desktop/filters.html';
     $('#advancedFiltersLink').attr('href', `${filterPath}?telegram_account_id=${encodeURIComponent(accountId)}`);
@@ -78,8 +114,61 @@
       });
   }
 
+  function accountAction(path, method, data, successMessage) {
+    setControlsPending(true);
+    $('#controlMessage').addClass('hidden');
+    return $.ajax({
+      url: `/api/telegram-accounts/${encodeURIComponent(accountId)}/${path}`,
+      method,
+      contentType: 'application/json',
+      data: data === undefined ? undefined : JSON.stringify(data)
+    })
+      .done(function () {
+        controlMessage(successMessage, false);
+        loadManagement();
+      })
+      .fail(function (xhr) {
+        controlMessage(requestError(xhr, 'Unable to update this Telegram account.'), true);
+      })
+      .always(function () {
+        setControlsPending(false);
+      });
+  }
+
   $(function () {
     loadManagement();
+
+    $('#reconnectAccount').on('click', function () {
+      accountAction('reconnect', 'POST', undefined, 'Telegram account reconnected.');
+    });
+
+    $('#disconnectAccount').on('click', function () {
+      accountAction('disconnect', 'POST', undefined, 'Telegram account disconnected.');
+    });
+
+    $('#toggleArchive').on('click', function () {
+      if (!currentAccount) return;
+      const enabled = !currentAccount.archive_enabled;
+      accountAction(
+        'archive-enabled',
+        'PATCH',
+        { enabled },
+        enabled ? 'Archiving resumed.' : 'Archiving paused.'
+      );
+    });
+
+    $('#removeAccount').on('click', function () {
+      const confirmed = window.confirm(
+        'Remove the saved Telegram connection? Your archived messages, filters, and account history will be kept.'
+      );
+      if (!confirmed) return;
+      accountAction(
+        'connection',
+        'DELETE',
+        undefined,
+        'Telegram connection removed. Archived data was preserved.'
+      );
+    });
 
     $('#filtersEnabled').on('change', function () {
       const toggle = $(this);

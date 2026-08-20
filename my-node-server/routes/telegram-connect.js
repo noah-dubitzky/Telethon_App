@@ -79,7 +79,8 @@ async function finalizeConnection(userId, attempt, result) {
       await connection.execute(
         `UPDATE telegram_accounts
          SET display_name = ?, session_ciphertext = ?, session_key_version = ?,
-             connection_status = 'connected', connected_at = NOW(), last_seen_at = NOW()
+             connection_status = 'connected', archive_enabled = TRUE,
+             connected_at = NOW(), last_seen_at = NOW()
          WHERE id = ? AND user_id = ?`,
         [displayName, encryptedSession.ciphertext, encryptedSession.keyVersion, accountId, userId]
       );
