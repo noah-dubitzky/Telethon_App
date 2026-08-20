@@ -47,7 +47,11 @@
     link.append($('<p class="text-sm text-slate-500 mt-1">').text(`Connected: ${formatDate(account.connected_at)}`));
     link.append($('<p class="text-sm text-slate-500 mt-1">').text(`Last activity: ${formatDate(account.last_seen_at)}`));
     card.append(link);
-    card.append($('<button type="button" disabled class="self-start rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-400 cursor-not-allowed">').text('Manage — Coming soon'));
+    const manageUrl = new URL('/manage-account.html', window.location.origin);
+    manageUrl.searchParams.set('telegram_account_id', account.id);
+    card.append($('<a class="self-start rounded-lg border border-blue-300 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 transition">')
+      .attr('href', manageUrl.pathname + manageUrl.search)
+      .text('Manage'));
     return card;
   }
 

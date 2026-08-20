@@ -1,10 +1,28 @@
 const channelsTableBody = document.querySelector('#channels-table tbody');
 const sendersTableBody = document.querySelector('#senders-table tbody');
+const filterParams = new URLSearchParams(window.location.search);
+const telegramAccountId = filterParams.get('telegram_account_id');
+const validTelegramAccountId = /^\d+$/.test(telegramAccountId || '') && telegramAccountId !== '0';
+
+function accountQuery() {
+    return `telegram_account_id=${encodeURIComponent(telegramAccountId)}`;
+}
+
+function showPageError(message) {
+    channelsTableBody.innerHTML = `<tr><td colspan="3">${sanitize(message)}</td></tr>`;
+    sendersTableBody.innerHTML = `<tr><td colspan="3">${sanitize(message)}</td></tr>`;
+}
 
 async function fetchFiltersData() {
-    const response = await fetch('/api/filters');
+    if (!validTelegramAccountId) {
+        showPageError('Telegram account not found or unavailable.');
+        return;
+    }
+
+    const response = await fetch(`/api/filters?${accountQuery()}`);
     if (!response.ok) {
-        console.error('Failed to load filters data', response.statusText);
+        if (response.status === 401) window.location.replace('/');
+        showPageError('Unable to load filters for this Telegram account.');
         return;
     }
 
@@ -86,7 +104,7 @@ async function updateChannelFilter(channelId, allow, toggle) {
     }
 
     try {
-        const response = await fetch(`/api/filters/channel/${channelId}`, {
+        const response = await fetch(`/api/filters/channel/${channelId}?${accountQuery()}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ allow })
@@ -117,7 +135,7 @@ async function updateSenderFilter(senderId, allow, toggle) {
     }
 
     try {
-        const response = await fetch(`/api/filters/sender/${senderId}`, {
+        const response = await fetch(`/api/filters/sender/${senderId}?${accountQuery()}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ allow })
@@ -138,6 +156,13 @@ async function updateSenderFilter(senderId, allow, toggle) {
             setToggleStatus(toggle, !allow);
         }
         fetchFiltersData();
+    }
+}
+
+if (validTelegramAccountId) {
+    const backLink = document.querySelector('[data-manage-back]');
+    if (backLink) {
+        backLink.href = `/manage-account.html?telegram_account_id=${encodeURIComponent(telegramAccountId)}`;
     }
 }
 
