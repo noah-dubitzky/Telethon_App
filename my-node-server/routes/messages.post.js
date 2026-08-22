@@ -14,6 +14,7 @@ router.post('/', requireWorker, async (req, res) => {
     sender_id,
     text,
     media_path,
+    media,
     channel_name,
     channel_id,
     telegram_account_id,
@@ -93,8 +94,26 @@ router.post('/', requireWorker, async (req, res) => {
     );
     const messagePk = msgRes.insertId;
 
-    // media (single file for now)
-    if (media_path) {
+    // New records use a private S3 key. Legacy local paths remain supported.
+    if (media?.s3_key) {
+      const [[owner]] = await conn.execute(
+        'SELECT user_id FROM telegram_accounts WHERE id = ? LIMIT 1', [accountId]
+      );
+      const expectedPrefix = owner && `users/${owner.user_id}/telegram_accounts/${accountId}/`;
+      if (!expectedPrefix || !String(media.s3_key).startsWith(expectedPrefix)) {
+        const ownershipError = new Error('Media S3 key does not match account ownership');
+        ownershipError.statusCode = 400;
+        throw ownershipError;
+      }
+      await conn.execute(
+        `INSERT INTO media (message_id, s3_key, original_filename, mime_type, file_size, media_type)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE s3_key = VALUES(s3_key), original_filename = VALUES(original_filename),
+           mime_type = VALUES(mime_type), file_size = VALUES(file_size), media_type = VALUES(media_type)`,
+        [messagePk, media.s3_key, media.original_filename || null, media.mime_type || null,
+          Number.isSafeInteger(media.file_size) ? media.file_size : null, media.media_type || null]
+      );
+    } else if (media_path) {
       await conn.execute(
         `INSERT INTO media (message_id, path)
          VALUES (?, ?)
@@ -146,7 +165,7 @@ router.post('/', requireWorker, async (req, res) => {
     }
   } catch (err) {
     await conn.rollback();
-    res.status(500).json({ error: 'Database error', details: err.message });
+    res.status(err.statusCode || 500).json({ error: err.statusCode ? err.message : 'Database error' });
   } finally {
     conn.release();
   }

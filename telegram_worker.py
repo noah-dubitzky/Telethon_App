@@ -1,11 +1,18 @@
 """One-process, multi-session Telethon ingestion worker."""
 import asyncio
 import logging
+import mimetypes
 import os
+import re
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+try:
+    import boto3
+except ImportError:  # Gives a focused startup error when dependencies were not installed.
+    boto3 = None
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 from telethon.tl.types import Channel, Chat, User
@@ -28,6 +35,109 @@ def display_name(entity):
 class ActiveClient:
     client: TelegramClient
     account_id: int
+    user_id: int
+
+
+class S3MediaStorage:
+    CATEGORIES = {"images", "videos", "audio", "documents", "stickers", "voice", "other"}
+
+    def __init__(self, s3_client=None):
+        self.bucket = os.getenv("S3_BUCKET_NAME", "").strip()
+        self.region = os.getenv("AWS_REGION", "").strip()
+        if not self.bucket or not self.region:
+            raise RuntimeError("S3_BUCKET_NAME and AWS_REGION are required")
+        # Do not pass credentials explicitly: boto3's default chain supports both
+        # local AWS_* variables and an EC2 instance-profile IAM role.
+        if s3_client is None and boto3 is None:
+            raise RuntimeError("boto3 is required; install requirements-step5.txt")
+        self.client = s3_client or boto3.client("s3", region_name=self.region)
+
+    @staticmethod
+    def _document(event):
+        return getattr(getattr(event, "media", None), "document", None)
+
+    def describe(self, event):
+        document = self._document(event)
+        event_file = getattr(event, "file", None)
+        mime_type = (getattr(document, "mime_type", None) or getattr(event_file, "mime_type", None) or "").lower()
+        original = getattr(event_file, "name", None)
+        is_sticker = bool(getattr(event, "sticker", None))
+        is_voice = bool(getattr(event, "voice", None))
+        if is_sticker:
+            category = "stickers"
+        elif is_voice:
+            category = "voice"
+        elif mime_type.startswith("image/") or getattr(event, "photo", None):
+            category = "images"
+        elif mime_type.startswith("video/") or getattr(event, "video", None):
+            category = "videos"
+        elif mime_type.startswith("audio/") or getattr(event, "audio", None):
+            category = "audio"
+        elif document:
+            category = "documents"
+        else:
+            category = "other"
+        extension = (Path(original or "").suffix or getattr(event_file, "ext", None)
+                     or mimetypes.guess_extension(mime_type) or "")
+        extension = re.sub(r"[^A-Za-z0-9.]", "", extension.lower())[:16]
+        return category, mime_type or None, original, extension
+
+    @staticmethod
+    def _safe_name(value):
+        value = Path(value or "").name
+        stem, suffix = Path(value).stem, Path(value).suffix
+        stem = re.sub(r"[^A-Za-z0-9._-]+", "_", stem).strip("._-")[:120] or "file"
+        suffix = re.sub(r"[^A-Za-z0-9.]", "", suffix.lower())[:16]
+        return f"{stem}{suffix}"
+
+    def object_key(self, user_id, account_id, event, category, original, extension):
+        chat_id = str(event.chat_id).replace("-", "neg")
+        message_id = int(event.message.id)
+        if original:
+            safe = self._safe_name(original)
+            filename = f"{chat_id}_{message_id}_{safe}"
+        else:
+            filename = f"{chat_id}_{message_id}{extension}"
+        return f"users/{int(user_id)}/telegram_accounts/{int(account_id)}/{category}/{filename}"
+
+    async def archive(self, user_id, account_id, event):
+        category, mime_type, original, extension = self.describe(event)
+        key = self.object_key(user_id, account_id, event, category, original, extension)
+        temp_path = None
+        uploaded = False
+        try:
+            suffix = extension or ".bin"
+            with tempfile.NamedTemporaryFile(prefix="telesaver_", suffix=suffix, delete=False) as temp:
+                temp_path = Path(temp.name)
+            try:
+                downloaded = await event.download_media(file=str(temp_path))
+                if not downloaded or not temp_path.is_file():
+                    raise RuntimeError("Telegram returned no downloaded media file")
+            except Exception as error:
+                log.error("telegram download failed user=%s account=%s message=%s media_type=%s type=%s",
+                          user_id, account_id, event.message.id, category, type(error).__name__)
+                return None
+            try:
+                upload_args = {"ContentType": mime_type} if mime_type else None
+                await asyncio.to_thread(self.client.upload_file, str(temp_path), self.bucket, key, upload_args)
+                uploaded = True
+            except Exception as error:
+                log.error("s3 upload failed user=%s account=%s message=%s media_type=%s s3_key=%s type=%s",
+                          user_id, account_id, event.message.id, category, key, type(error).__name__)
+                return None
+            return {"s3_key": key, "original_filename": original[:255] if original else None,
+                    "mime_type": mime_type[:255] if mime_type else None,
+                    "file_size": temp_path.stat().st_size, "media_type": category, "_temp_path": str(temp_path)}
+        finally:
+            # Upload failures are logged before this executes. Successful uploads
+            # are retained until the caller has attempted database persistence.
+            if temp_path and temp_path.exists() and not uploaded:
+                temp_path.unlink(missing_ok=True)
+
+    @staticmethod
+    def cleanup(media):
+        if media and media.get("_temp_path"):
+            Path(media["_temp_path"]).unlink(missing_ok=True)
 
 
 class ActiveClientManager:
@@ -40,7 +150,7 @@ class ActiveClientManager:
         self.backend = backend
         self.clients = {}
         self.locks = {}
-        self.media_root = Path(os.getenv("MEDIA_ROOT", "my-node-server/public/uploads"))
+        self.media_storage = S3MediaStorage()
         self.timezone = ZoneInfo(os.getenv("ARCHIVE_TIMEZONE", "America/New_York"))
 
     def running_account_ids(self):
@@ -72,7 +182,7 @@ class ActiveClientManager:
                     await self.backend.set_status(account_id, "revoked")
                     log.warning("account=%s session revoked", account_id)
                     return False
-                self.clients[account_id] = ActiveClient(client, account_id)
+                self.clients[account_id] = ActiveClient(client, account_id, int(account["user_id"]))
                 await self.backend.set_status(account_id, "connected")
                 log.info("account=%s started", account_id)
                 return True
@@ -121,7 +231,10 @@ class ActiveClientManager:
                 return
         except Exception as error:
             log.warning("account=%s filter check failed-open type=%s", account_id, type(error).__name__)
-        media_path = await self._download_media(account_id, event)
+        active = self.clients.get(account_id)
+        if not active:
+            raise RuntimeError(f"No trusted active account context for account {account_id}")
+        media = await self._download_media(active.user_id, account_id, event)
         payload = {
             "telegram_account_id": account_id,
             "telegram_message_id": event.message.id if event.message else None,
@@ -133,20 +246,25 @@ class ActiveClientManager:
             "channel_id": channel_id,
             "is_channel_post": bool(event.is_channel and not event.is_group),
             "text": (event.raw_text or "").strip() or " ",
-            "media_path": media_path,
+            "media": {k: v for k, v in media.items() if not k.startswith("_")} if media else None,
             "timestamp": event.date.astimezone(self.timezone).strftime("%Y-%m-%d %H:%M:%S"),
         }
-        await self.backend.ingest(payload)
+        try:
+            await self.backend.ingest(payload)
+        except Exception as error:
+            log.error("database save failed user=%s account=%s message=%s media_type=%s s3_key=%s type=%s",
+                      active.user_id, account_id, payload["telegram_message_id"],
+                      media.get("media_type") if media else None, media.get("s3_key") if media else None,
+                      type(error).__name__)
+            raise
+        finally:
+            self.media_storage.cleanup(media)
         log.info("account=%s message=%s archived", account_id, payload["telegram_message_id"])
 
-    async def _download_media(self, account_id, event):
+    async def _download_media(self, user_id, account_id, event):
         if not event.media:
             return None
-        mime = getattr(getattr(event.media, "document", None), "mime_type", "") or ""
-        kind = "videos" if mime.startswith("video/") else "images"
-        target = self.media_root / str(account_id) / kind
-        target.mkdir(parents=True, exist_ok=True)
-        return await event.download_media(file=str(target))
+        return await self.media_storage.archive(user_id, account_id, event)
 
 
 async def run():

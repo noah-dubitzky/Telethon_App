@@ -8,7 +8,7 @@ const router = express.Router();
 router.use(requireWorker);
 
 function serializeAccount(row) {
-  return { id: row.id, telegram_user_id: String(row.telegram_user_id), display_name: row.display_name,
+  return { id: row.id, user_id: row.user_id, telegram_user_id: String(row.telegram_user_id), display_name: row.display_name,
     connection_status: row.connection_status, session: decryptSecret(row.session_ciphertext, row.session_key_version) };
 }
 
@@ -30,7 +30,7 @@ router.get('/accounts', async (_req, res) => {
 router.get('/accounts/:id', async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      `SELECT id, telegram_user_id, display_name, connection_status, session_ciphertext, session_key_version
+      `SELECT id, user_id, telegram_user_id, display_name, connection_status, session_ciphertext, session_key_version
        FROM telegram_accounts WHERE id = ? AND session_ciphertext IS NOT NULL
          AND connection_status IN ('connected', 'starting', 'disconnected', 'error') LIMIT 1`, [req.params.id]);
     if (!rows[0]) return res.status(404).json({ error: 'Eligible account not found' });

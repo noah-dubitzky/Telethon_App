@@ -27,7 +27,7 @@ async function selection(req, res, alias) {
 const MESSAGE_COLUMNS = `
   m.id AS message_id, m.sent_at, s.name AS sender_name,
   s.phone AS sender_phone, s.external_sender_id,
-  c.name AS channel_name, m.text, md.path AS media_path`;
+  c.name AS channel_name, m.text, md.path AS media_path, md.s3_key`;
 const MESSAGE_JOINS = `
   JOIN telegram_accounts ta ON ta.id = m.telegram_account_id AND ta.user_id = ?
   LEFT JOIN senders s ON m.sender_id = s.id AND s.telegram_account_id = m.telegram_account_id
