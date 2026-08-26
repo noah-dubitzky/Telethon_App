@@ -54,7 +54,9 @@ function compareDates(dateStr, compareTo) {
 function renderMessage(msg){
 
     const ts = msg.timestamp ? new Date(msg.timestamp).toLocaleString() : "—";
-    const media = msg.media_path ? Helpers.cleanMediaPath(msg.media_path) : "";
+    const media = msg.media_path
+        ? Helpers.cleanMediaPath(msg.media_path)
+        : (msg.media_id && msg.s3_key ? `/api/media/${encodeURIComponent(msg.media_id)}/content` : "");
 
     // Fixed media width
     const mediaWidth = 280;
@@ -79,9 +81,9 @@ function renderMessage(msg){
 
     let mediaHTML = "";
     if (media){
-    if (Helpers.isImage(media)){
+    if (msg.media_type === 'images' || String(msg.mime_type || '').startsWith('image/') || Helpers.isImage(media)){
         mediaHTML = `<img src="${media}" alt="media" class="mt-3 max-h-80 object-contain" style="width:${mediaWidth}px;">`;
-    } else if (Helpers.isVideo(media)){
+    } else if (msg.media_type === 'videos' || String(msg.mime_type || '').startsWith('video/') || Helpers.isVideo(media)){
         mediaHTML = `<video src="${media}" controls class="mt-3 max-h-96" style="width:${mediaWidth}px;"></video>`;
     } else {
         mediaHTML = `<a href="${media}" target="_blank" class="mt-3 inline-block text-blue-600 hover:underline">Download attachment</a>`;
