@@ -78,19 +78,19 @@ async function finalizeConnection(userId, attempt, result) {
       accountId = existing[0].id;
       await connection.execute(
         `UPDATE telegram_accounts
-         SET display_name = ?, session_ciphertext = ?, session_key_version = ?,
+         SET display_name = ?, phone_number = ?, session_ciphertext = ?, session_key_version = ?,
              connection_status = 'connected', archive_enabled = TRUE,
              connected_at = NOW(), last_seen_at = NOW()
          WHERE id = ? AND user_id = ?`,
-        [displayName, encryptedSession.ciphertext, encryptedSession.keyVersion, accountId, userId]
+        [displayName, attempt.phone_number, encryptedSession.ciphertext, encryptedSession.keyVersion, accountId, userId]
       );
     } else {
       const [inserted] = await connection.execute(
         `INSERT INTO telegram_accounts
-           (user_id, telegram_user_id, display_name, session_ciphertext,
+           (user_id, telegram_user_id, display_name, phone_number, session_ciphertext,
             session_key_version, connection_status, connected_at, last_seen_at)
-         VALUES (?, ?, ?, ?, ?, 'connected', NOW(), NOW())`,
-        [userId, String(result.identity.id), displayName, encryptedSession.ciphertext, encryptedSession.keyVersion]
+         VALUES (?, ?, ?, ?, ?, ?, 'connected', NOW(), NOW())`,
+        [userId, String(result.identity.id), displayName, attempt.phone_number, encryptedSession.ciphertext, encryptedSession.keyVersion]
       );
       accountId = inserted.insertId;
     }
@@ -99,7 +99,7 @@ async function finalizeConnection(userId, attempt, result) {
       [attempt.id, userId]
     );
     await connection.commit();
-    return { id: accountId, telegram_user_id: String(result.identity.id), display_name: displayName, connection_status: 'connected' };
+    return { id: accountId, telegram_user_id: String(result.identity.id), display_name: displayName, phone_number: attempt.phone_number, connection_status: 'connected' };
   } catch (error) {
     await connection.rollback();
     throw error;

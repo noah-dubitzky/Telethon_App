@@ -5,7 +5,7 @@ const { controlAccount } = require('../services/telegramWorkerClient');
 
 const router = express.Router();
 const SAFE_ACCOUNT_COLUMNS = `
-  id, telegram_user_id, display_name, connection_status,
+  id, telegram_user_id, display_name, phone_number, connection_status,
   connected_at, last_seen_at, created_at, updated_at,
   filters_enabled, archive_enabled
 `;
@@ -74,6 +74,7 @@ router.get('/:id/management', async (req, res) => {
         id: row.id,
         telegram_user_id: row.telegram_user_id,
         display_name: row.display_name,
+        phone_number: row.phone_number,
         connection_status: row.connection_status,
         filters_enabled: Boolean(row.filters_enabled),
         archive_enabled: Boolean(row.archive_enabled),

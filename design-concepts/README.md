@@ -9,3 +9,9 @@
 - `messages-concept-1.png` — Telegram-style three-pane layout
 - `messages-concept-2.png` — archive workspace with a conversation details panel
 - `messages-concept-selected.png` — selected streamlined two-pane Telegram-style reader (concept 3)
+
+## Dashboard concepts
+
+- `dashboard-concept-1.png` — account-card overview with recent archive activity
+- `dashboard-concept-2.png` — archive-health overview with account and activity panels
+- `dashboard-concept-3.png` — compact Telegram-inspired account and archive workspace

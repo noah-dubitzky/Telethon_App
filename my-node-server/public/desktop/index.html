@@ -3,73 +3,121 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Telegram Dashboard</title>
+  <meta name="description" content="Manage your connected Telegram accounts and TeleSaver archives." />
+  <title>TeleSaver — Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="../scripts/session_guard.js"></script>
   <script src="/socket.io/socket.io.js"></script>
-  <script src="scripts/desktop_sidebar.js"></script>
-  <script src="../scripts/account_dashboard.js"></script>
-
+  <script defer src="scripts/desktop_sidebar.js"></script>
+  <script defer src="../scripts/account_dashboard.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
-  <!-- Header -->
-  <header class="bg-blue-600 text-white py-4 px-6 shadow-md grid grid-cols-[1fr_auto_1fr] items-center sticky top-0 z-30">
+<body class="min-h-screen bg-slate-50 text-slate-950 antialiased">
+  <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#061f42] text-white lg:flex">
+    <a href="/desktop/index.html" class="flex items-center gap-3 px-7 py-7" aria-label="TeleSaver dashboard">
+      <img src="/assets/telesaver.png" alt="" class="h-11 w-11 rounded-xl object-cover ring-1 ring-white/15" />
+      <span class="text-xl font-bold tracking-tight">TeleSaver</span>
+    </a>
 
-  <!-- Left spacer (balances right button) -->
-  <div></div>
+    <nav class="mt-3 space-y-2 px-4" aria-label="Dashboard navigation">
+      <a href="/desktop/index.html" class="flex items-center gap-3 rounded-xl bg-blue-500/20 px-4 py-3 text-sm font-semibold text-white ring-1 ring-inset ring-blue-300/10">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a href="#accountGrid" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7.5h16v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-11Z"/><path stroke-linecap="round" d="M8 7.5V5.8A2.8 2.8 0 0 1 10.8 3h2.4A2.8 2.8 0 0 1 16 5.8v1.7M9 12h6"/></svg>
+        Archives
+      </a>
+      <a href="/desktop/filters.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16l-6 7v5.5l-4 2V12L4 5Z"/></svg>
+        Filters
+      </a>
+      <a href="#recentActivity" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>
+        Activity
+      </a>
+      <a href="/settings.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
+        Settings
+      </a>
+    </nav>
 
-  <!-- Center group: logo + title -->
-  <div class="flex items-center space-x-3 justify-self-center">
-    <img
-      src="/assets/telesaver.png"
-      alt="App Logo"
-      class="h-10 w-10 rounded-full shadow-md"
-    />
-    <h1 class="text-xl font-bold whitespace-nowrap">
-      Telesaver Dashboard
-    </h1>
+    <div class="mt-auto border-t border-white/10 p-4">
+      <div class="rounded-xl bg-white/5 p-4 ring-1 ring-inset ring-white/10">
+        <p class="text-xs font-medium text-slate-400">Signed in as</p>
+        <p data-user-email class="mt-1 truncate text-sm font-semibold">Loading…</p>
+        <button data-logout type="button" class="mt-4 text-xs font-semibold text-blue-300 transition hover:text-white">Log out</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="min-h-screen lg:pl-64">
+    <header class="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-slate-200 bg-white/95 px-5 backdrop-blur sm:px-8 lg:px-10">
+      <a href="/desktop/index.html" class="flex items-center gap-2 lg:hidden" aria-label="TeleSaver dashboard">
+        <img src="/assets/telesaver.png" alt="" class="h-9 w-9 rounded-lg" />
+        <span class="font-bold">TeleSaver</span>
+      </a>
+      <p class="hidden min-w-0 text-base font-semibold text-slate-800 sm:block">Welcome, <span id="username" class="truncate">Loading…</span></p>
+      <label class="relative ml-auto hidden w-full max-w-md md:block">
+        <span class="sr-only">Search accounts</span>
+        <svg aria-hidden="true" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg>
+        <input id="accountSearch" type="search" placeholder="Search Telegram accounts…" class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" />
+      </label>
+      <button id="openSidebar" type="button" class="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 md:ml-2" aria-label="Open account menu">
+        <span aria-hidden="true">TS</span>
+      </button>
+    </header>
+
+    <main class="mx-auto w-full max-w-[1500px] px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
+      <section id="accountListView">
+        <div class="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="text-sm font-semibold text-blue-600">Dashboard</p>
+            <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-950">Telegram accounts</h1>
+            <p class="mt-2 text-slate-500">Manage every archive from one secure workspace.</p>
+          </div>
+          <a href="/settings.html" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20">
+            <span aria-hidden="true" class="text-lg leading-none">+</span>
+            Connect account
+          </a>
+        </div>
+
+        <p id="accountLoading" class="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500" role="status">Loading Telegram accounts…</p>
+        <div id="accountEmpty" class="mb-5 hidden rounded-2xl border border-slate-200 bg-white p-6 text-center">
+          <h2 class="text-lg font-bold">No Telegram accounts connected yet</h2>
+          <p class="mt-2 text-sm text-slate-500">Connect your first account to begin building its archive.</p>
+        </div>
+        <div id="accountGrid" class="grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"></div>
+        <p id="accountSearchEmpty" class="mt-6 hidden rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">No accounts match your search.</p>
+
+        <section id="recentActivity" class="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-200 px-5 py-5 sm:px-6">
+            <div><h2 class="text-lg font-bold text-slate-900">Recent archive activity</h2><p class="mt-1 text-sm text-slate-500">Latest account connections and archive check-ins.</p></div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[720px] text-left text-sm">
+              <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500"><tr><th class="px-6 py-3">Account</th><th class="px-6 py-3">Status</th><th class="px-6 py-3">Last activity</th><th class="px-6 py-3 text-right">Action</th></tr></thead>
+              <tbody id="recentActivityRows" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+          <p id="recentActivityEmpty" class="hidden p-6 text-center text-sm text-slate-500">Activity will appear after you connect a Telegram account.</p>
+        </section>
+      </section>
+
+      <section id="archiveView" class="hidden">
+        <a href="/desktop/index.html" class="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700">← Back to Telegram accounts</a>
+        <div class="mt-6 flex flex-col gap-4 border-b border-slate-200 pb-7 sm:flex-row sm:items-end sm:justify-between">
+          <div><p class="text-sm font-semibold text-blue-600">Telegram archive</p><h1 id="selectedAccountName" class="mt-1 text-3xl font-bold tracking-tight">Loading…</h1><p class="mt-2 text-sm text-slate-500">Connection status: <span id="selectedAccountStatus" class="font-semibold">Loading…</span></p></div>
+          <a id="selectedManageLink" href="/manage-account.html" class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700">Manage account</a>
+        </div>
+        <p id="archiveLoading" class="py-10 text-center text-slate-500" role="status">Loading senders and channels…</p>
+        <p id="archiveError" class="mt-6 hidden rounded-xl border border-red-200 bg-red-50 p-4 text-red-700"></p>
+        <div class="mt-7 grid gap-6 lg:grid-cols-2">
+          <section class="rounded-2xl border border-slate-200 bg-white shadow-sm"><div class="border-b border-slate-200 px-5 py-4"><h2 class="text-lg font-bold">Senders</h2><p class="mt-1 text-sm text-slate-500">Open an archived direct conversation.</p></div><div id="senderList" class="space-y-2 p-3"></div><p id="senderEmpty" class="hidden p-6 text-center text-slate-500">No senders found for this account.</p></section>
+          <section class="rounded-2xl border border-slate-200 bg-white shadow-sm"><div class="border-b border-slate-200 px-5 py-4"><h2 class="text-lg font-bold">Channels</h2><p class="mt-1 text-sm text-slate-500">Browse messages saved from Telegram channels.</p></div><div id="channelList" class="space-y-2 p-3"></div><p id="channelEmpty" class="hidden p-6 text-center text-slate-500">No channels found for this account.</p></section>
+        </div>
+      </section>
+    </main>
   </div>
-
-  <!-- Right sidebar button -->
-  <button id="openSidebar" class="justify-self-end">
-    <img
-      src="/assets/SideBar.png"
-      alt="Open Sidebar"
-      class="h-9 w-9 shadow-md cursor-pointer
-             hover:scale-105 transition-transform"
-    />
-  </button>
-
-</header>
-
-  <!-- User Info -->
-  <section class="text-center mt-8">
-    <h2 class="text-2xl font-semibold text-gray-800">Welcome, <span id="username" class="font-bold">Loading…</span></h2>
-  </section>
-
-  <main class="max-w-5xl w-full mx-auto px-6 py-8">
-    <section id="accountListView">
-      <div class="mb-6"><h2 class="text-2xl font-bold text-slate-800">Telegram Accounts</h2><p class="text-slate-500 mt-1">Choose an account to open its archive.</p></div>
-      <p id="accountLoading" class="text-slate-500" role="status">Loading Telegram accounts…</p>
-      <div id="accountEmpty" class="hidden mb-5 rounded-2xl bg-slate-50 border border-slate-200 p-5 text-center">
-        <h3 class="text-lg font-bold">No Telegram accounts connected yet.</h3>
-        <p class="text-slate-500 mt-2">Use the card below to connect your first account.</p>
-      </div>
-      <div id="accountGrid" class="grid md:grid-cols-2 gap-5"></div>
-    </section>
-
-    <section id="archiveView" class="hidden">
-      <a href="/desktop/index.html" class="text-blue-600 font-semibold hover:underline">← Back to Telegram Accounts</a>
-      <div class="mt-5 mb-7"><h2 id="selectedAccountName" class="text-2xl font-bold">Telegram archive</h2><p class="text-slate-500">Status: <span id="selectedAccountStatus">Loading…</span></p></div>
-      <p id="archiveLoading" class="text-slate-500" role="status">Loading senders and channels…</p>
-      <p id="archiveError" class="hidden rounded-xl bg-red-50 text-red-700 p-4"></p>
-      <div class="grid md:grid-cols-2 gap-6">
-        <section class="bg-white rounded-2xl shadow p-5"><h3 class="text-xl font-bold mb-4">Senders</h3><div id="senderList" class="space-y-3"></div><p id="senderEmpty" class="hidden text-slate-500">No senders found for this account.</p></section>
-        <section class="bg-white rounded-2xl shadow p-5"><h3 class="text-xl font-bold mb-4">Channels</h3><div id="channelList" class="space-y-3"></div><p id="channelEmpty" class="hidden text-slate-500">No channels found for this account.</p></section>
-      </div>
-    </section>
-  </main>
-
 </body>
 </html>

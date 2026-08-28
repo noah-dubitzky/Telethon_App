@@ -23,6 +23,7 @@ test('account dashboard scopes entity requests and navigation by Telegram accoun
   assert.match(source, /\/messages\/entities/);
   assert.match(source, /telegram_account_id/);
   assert.match(source, /manage-account\.html/);
+  assert.match(source, /account\.phone_number/);
   assert.match(source, /Add another account/);
   assert.match(source, /grid\.append\(addAccountCard\(\)\)/);
   assert.doesNotMatch(source, /session_ciphertext|api_hash|worker_secret/i);
