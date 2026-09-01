@@ -118,32 +118,6 @@
       .append($('<span class="mt-1 text-sm text-slate-500">').text('Connect another Telegram account'));
   }
 
-  function renderRecentActivity(accounts) {
-    const rows = $('#recentActivityRows');
-    if (!rows.length) return;
-    rows.empty();
-    $('#recentActivityEmpty').toggleClass('hidden', accounts.length !== 0);
-    accounts
-      .slice()
-      .sort((a, b) => new Date(b.last_seen_at || 0) - new Date(a.last_seen_at || 0))
-      .forEach(function (account) {
-        const destination = new URL(window.location.href);
-        destination.search = '';
-        destination.searchParams.set('telegram_account_id', account.id);
-        const row = $('<tr class="transition hover:bg-slate-50">');
-        const accountCell = $('<td class="px-6 py-4">');
-        const accountWrap = $('<div class="flex items-center gap-3">');
-        accountWrap.append($('<span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">').text(initials(account)));
-        accountWrap.append($('<div>').append($('<p class="font-semibold text-slate-900">').text(accountName(account))).append($('<p class="text-xs text-slate-500">').text(accountPhone(account))));
-        accountCell.append(accountWrap);
-        row.append(accountCell);
-        row.append($('<td class="px-6 py-4">').append($('<span class="rounded-full px-2.5 py-1 text-xs font-semibold capitalize">').addClass(statusClasses(account.connection_status)).text(account.connection_status)));
-        row.append($('<td class="px-6 py-4 text-slate-600">').append($('<p class="font-medium text-slate-700">').text(relativeDate(account.last_seen_at))).append($('<p class="mt-0.5 text-xs text-slate-500">').text(formatDate(account.last_seen_at))));
-        row.append($('<td class="px-6 py-4 text-right">').append($('<a class="font-semibold text-blue-600 hover:text-blue-700">').attr('href', destination.pathname + destination.search).text('Open archive')));
-        rows.append(row);
-      });
-  }
-
   function bindAccountSearch() {
     const search = $('#accountSearch');
     if (!search.length) return;
@@ -157,6 +131,72 @@
       });
       $('#accountSearchEmpty').toggleClass('hidden', visible !== 0 || !query);
     });
+  }
+
+  function recentMessageLink(message) {
+    const isChannel = Boolean(message.channel_id);
+    const entityId = isChannel ? message.channel_id : message.sender_id;
+    if (!entityId) return null;
+    const destination = new URL(`${pageBase}/${isChannel ? 'channels' : 'sender'}.html`, window.location.origin);
+    destination.searchParams.set('id', entityId);
+    destination.searchParams.set('telegram_account_id', message.telegram_account_id);
+    destination.searchParams.set('message_id', message.message_id);
+    if (isChannel) {
+      destination.searchParams.set('name', message.channel_name || '');
+    } else {
+      destination.searchParams.set('external_id', message.external_sender_id || '');
+      destination.searchParams.set('phone', message.sender_phone || '');
+    }
+    return destination.pathname + destination.search;
+  }
+
+  function recentMessageRow(message) {
+    const sender = message.sender_name || message.channel_name || 'Unknown sender';
+    const account = message.account_name || message.account_phone || 'Telegram account';
+    const messageText = String(message.text || '').trim();
+    const preview = messageText && messageText !== ' '
+      ? messageText
+      : message.media_name || (message.media_type ? `${message.media_type} attachment` : 'Message received');
+    const href = recentMessageLink(message);
+    const row = $('<article class="grid gap-4 border-l-4 border-l-transparent px-5 py-5 transition hover:border-l-blue-500 hover:bg-blue-50/60 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-6">');
+    const content = $('<div class="flex min-w-0 items-start gap-3">');
+    content.append($('<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white shadow-sm">').text(sender.trim().charAt(0).toUpperCase() || '?'));
+    const messageBody = $('<div class="min-w-0 flex-1">');
+    const labels = $('<div class="flex flex-wrap items-center gap-2">');
+    labels.append($('<h3 class="font-bold text-slate-900">').text(sender));
+    labels.append($('<span class="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-700 ring-1 ring-inset ring-sky-200">').text(account));
+    labels.append($(`<span class="rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${message.channel_id ? 'bg-violet-50 text-violet-700 ring-violet-200' : 'bg-emerald-50 text-emerald-700 ring-emerald-200'}">`).text(message.channel_id ? 'Channel' : 'Direct message'));
+    if (message.media_id) {
+      labels.append($('<span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-200">').text(message.media_type || 'Media'));
+    }
+    messageBody.append(labels);
+    messageBody.append($('<p class="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">').text(preview));
+    content.append(messageBody);
+    row.append(content);
+    const meta = $('<div class="flex shrink-0 items-center justify-between gap-5 sm:flex-col sm:items-end sm:justify-center sm:gap-2">');
+    meta.append($('<time class="whitespace-nowrap text-xs font-medium text-slate-500">').attr('datetime', message.sent_at || '').text(formatDate(message.sent_at)));
+    if (href) meta.append($('<a class="text-sm font-semibold text-blue-600 hover:text-blue-700">').attr('href', href).text('View conversation →'));
+    row.append(meta);
+    return row;
+  }
+
+  function loadRecentMessages() {
+    if (!$('#recentMessages').length) return;
+    $('#recentMessagesLoading').removeClass('hidden');
+    $('#recentMessagesError, #recentMessagesEmpty').addClass('hidden');
+    $.get('/messages/recent-received?limit=15&offset=0')
+      .done(function (data) {
+        const messages = Array.isArray(data.messages) ? data.messages : [];
+        const container = $('#recentMessages').empty().toggleClass('hidden', messages.length === 0);
+        $('#recentMessagesEmpty').toggleClass('hidden', messages.length !== 0);
+        messages.forEach(message => container.append(recentMessageRow(message)));
+      })
+      .fail(function (xhr) {
+        if (xhr.status === 401) window.location.replace('/');
+        $('#recentMessages').addClass('hidden').empty();
+        $('#recentMessagesError').removeClass('hidden');
+      })
+      .always(function () { $('#recentMessagesLoading').addClass('hidden'); });
   }
 
   function loadAccounts() {
@@ -176,7 +216,6 @@
 
         // Keep account creation in the same visual hierarchy as account cards.
         grid.append(addAccountCard());
-        renderRecentActivity(data.accounts);
         bindAccountSearch();
       })
       .fail(function (xhr) {
@@ -235,11 +274,17 @@
   }
 
   $(function () {
-    if (accountId) loadArchive(); else loadAccounts();
-    if (accountId && typeof io === 'function') {
+    if (accountId) {
+      loadArchive();
+    } else {
+      loadAccounts();
+      loadRecentMessages();
+    }
+    if (typeof io === 'function') {
       const socket = io();
       socket.on('updateMessage', function (data) {
-        if (String(data.telegram_account_id) === String(accountId)) loadArchive();
+        if (accountId && String(data.telegram_account_id) === String(accountId)) loadArchive();
+        if (!accountId) loadRecentMessages();
       });
     }
   });

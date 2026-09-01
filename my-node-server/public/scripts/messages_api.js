@@ -34,6 +34,13 @@ class MessagesAPI {
     return $.get(`${this.baseUrl}/messages/channel/${channelId}?${this.accountQuery(accountId, { offset })}`);
   }
 
+  getMessageContext(type, entityId, messageId, accountId) {
+    if (type !== 'sender' && type !== 'channel') {
+      return $.Deferred().reject(new Error('Invalid conversation type')).promise();
+    }
+    return $.get(`${this.baseUrl}/messages/${type}/${entityId}/context/${messageId}?${this.accountQuery(accountId)}`);
+  }
+
   // ✅ post a new message
   postMessage(payload) {
     return $.ajax({

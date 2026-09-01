@@ -17,6 +17,7 @@ router.post('/', requireWorker, async (req, res) => {
     media,
     channel_name,
     channel_id,
+    is_outgoing,
     telegram_account_id,
     telegram_chat_id,
     telegram_message_id
@@ -86,11 +87,12 @@ router.post('/', requireWorker, async (req, res) => {
 
     // message
     const [msgRes] = await conn.execute(
-      `INSERT INTO messages (telegram_account_id, telegram_chat_id, telegram_message_id, sender_id, channel_id, sent_at, text)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO messages (telegram_account_id, telegram_chat_id, telegram_message_id, sender_id, channel_id, is_outgoing, sent_at, text)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE sender_id = VALUES(sender_id), channel_id = VALUES(channel_id),
-         sent_at = VALUES(sent_at), text = VALUES(text), id = LAST_INSERT_ID(id)`,
-      [accountId, telegram_chat_id || null, telegram_message_id || null, senderPk, channelPk, sentAtStr, text || null]
+         is_outgoing = VALUES(is_outgoing), sent_at = VALUES(sent_at), text = VALUES(text), id = LAST_INSERT_ID(id)`,
+      [accountId, telegram_chat_id || null, telegram_message_id || null, senderPk, channelPk,
+        is_outgoing === true, sentAtStr, text || null]
     );
     const messagePk = msgRes.insertId;
 
@@ -153,6 +155,7 @@ router.post('/', requireWorker, async (req, res) => {
           sender_id: sender_id || null,
           channel_name: channel_name || null,
           channel_id: channel_id || null,
+          is_outgoing: is_outgoing === true,
           text: text || null,
           media_path: media_path || null,
           timestamp: sentAtStr,

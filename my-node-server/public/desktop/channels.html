@@ -71,6 +71,7 @@
       const channelId = Helpers.getQueryParam("id");
       const accountId = Helpers.getQueryParam("telegram_account_id");
       const channelName = Helpers.getQueryParam("name");
+      const contextMessageId = Helpers.getQueryParam("message_id");
 
       const api = new MessagesAPI(); // our global API helper
 
@@ -85,7 +86,12 @@
 
       try {
         let offset = 0;
-        const rows = await api.getMessagesByChannel(channelId, offset, accountId);
+        const contextResponse = contextMessageId
+          ? await api.getMessageContext('channel', channelId, contextMessageId, accountId)
+          : null;
+        const rows = contextResponse
+          ? contextResponse.messages
+          : await api.getMessagesByChannel(channelId, offset, accountId);
         const channelName = (rows && rows[0] && (rows[0].channel_name || rows[0].channel)) || "";
         $("#channel-name").text(channelName);
 
@@ -96,12 +102,12 @@
           return;
         }
 
-        let loadedRows = rows.slice().reverse();
+        let loadedRows = contextResponse ? rows.slice() : rows.slice().reverse();
         loadedRows.forEach(m => box.append(renderMessage(m)));
-        offset += rows.length;
+        if (!contextResponse) offset += rows.length;
 
         let isLoading = false;
-        let hasMore = rows.length === 50;
+        let hasMore = !contextResponse && rows.length === 50;
         async function loadOlderMessages() {
           if (isLoading || !hasMore) return;
           isLoading = true;
@@ -125,13 +131,21 @@
           if (this.scrollTop <= 10) loadOlderMessages();
         });
 
-        scrollMessagesToBottom();
-        // Ensure scroll after images/videos load
-        setTimeout(scrollMessagesToBottom, 300); // fallback for async rendering
-        // Listen for media load events
-        box.find('img,video').on('load loadeddata', function() {
+        if (contextResponse) {
+          Helpers.focusMessage(contextMessageId);
+          setTimeout(function () { Helpers.focusMessage(contextMessageId); }, 300);
+          box.find('img,video').on('load loadeddata', function() {
+            Helpers.focusMessage(contextMessageId);
+          });
+        } else {
           scrollMessagesToBottom();
-        });
+          // Ensure scroll after images/videos load
+          setTimeout(scrollMessagesToBottom, 300); // fallback for async rendering
+          // Listen for media load events
+          box.find('img,video').on('load loadeddata', function() {
+            scrollMessagesToBottom();
+          });
+        }
 
       } catch (err) {
         $("#messages").html(`<div class="p-6 text-red-500">Failed to load messages.</div>`);

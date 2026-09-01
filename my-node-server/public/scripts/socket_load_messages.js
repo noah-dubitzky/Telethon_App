@@ -8,6 +8,7 @@
   const entityId = params.get('id');
   const externalSenderId = params.get('external_id');
   const channelName = params.get('name');
+  const contextMessageId = params.get('message_id');
   const isSenderPage = /\/sender\.html$/i.test(window.location.pathname);
   const isChannelPage = /\/channels\.html$/i.test(window.location.pathname);
 
@@ -64,6 +65,7 @@
   }
 
   socket.on('updateMessage', function (data) {
+    if (contextMessageId) return;
     if (eventMatchesOpenPage(data || {})) reloadOpenConversation();
   });
 })(jQuery);

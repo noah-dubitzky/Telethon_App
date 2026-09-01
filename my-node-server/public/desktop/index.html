@@ -24,21 +24,28 @@
         <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         Dashboard
       </a>
-      <a href="#accountGrid" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7.5h16v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-11Z"/><path stroke-linecap="round" d="M8 7.5V5.8A2.8 2.8 0 0 1 10.8 3h2.4A2.8 2.8 0 0 1 16 5.8v1.7M9 12h6"/></svg>
-        Archives
+      <a href="/desktop/all-messages.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v12H7l-3 3V5Z"/><path stroke-linecap="round" d="M8 9h8M8 13h5"/></svg>
+        <span>All Messages</span>
       </a>
-      <a href="/desktop/filters.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16l-6 7v5.5l-4 2V12L4 5Z"/></svg>
-        Filters
+      <!-- TODO(step-12-nav): implement the cross-account people directory. -->
+      <a href="/desktop/people.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path stroke-linecap="round" d="M3.5 19a5.5 5.5 0 0 1 11 0M14 15.5a4 4 0 0 1 6.5 3.1"/></svg>
+        <span>People</span><span class="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Soon</span>
       </a>
-      <a href="#recentActivity" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>
-        Activity
+      <!-- TODO(step-12-nav): implement the cross-account channel directory. -->
+      <a href="/desktop/archive-channels.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m4 13 14-7-4 14-3-5-7-2Z"/><path stroke-linecap="round" d="m11 15 3-3"/></svg>
+        <span>Channels</span><span class="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Soon</span>
+      </a>
+      <!-- TODO(step-12-nav): implement the cross-account media library. -->
+      <a href="/desktop/media-library.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m5 17 4-4 3 3 2-2 5 3"/></svg>
+        <span>Media &amp; Files</span><span class="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Soon</span>
       </a>
       <a href="/settings.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
         <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
-        Settings
+        <span>Accounts &amp; Settings</span><span class="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Soon</span>
       </a>
     </nav>
 
@@ -64,22 +71,18 @@
         <input id="accountSearch" type="search" placeholder="Search Telegram accounts…" class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" />
       </label>
       <button id="openSidebar" type="button" class="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 md:ml-2" aria-label="Open account menu">
-        <span aria-hidden="true">TS</span>
+        <span data-user-initial aria-hidden="true">…</span>
       </button>
     </header>
 
     <main class="mx-auto w-full max-w-[1500px] px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
       <section id="accountListView">
-        <div class="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div class="mb-7">
           <div>
             <p class="text-sm font-semibold text-blue-600">Dashboard</p>
             <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-950">Telegram accounts</h1>
             <p class="mt-2 text-slate-500">Manage every archive from one secure workspace.</p>
           </div>
-          <a href="/settings.html" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20">
-            <span aria-hidden="true" class="text-lg leading-none">+</span>
-            Connect account
-          </a>
         </div>
 
         <p id="accountLoading" class="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500" role="status">Loading Telegram accounts…</p>
@@ -90,18 +93,19 @@
         <div id="accountGrid" class="grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"></div>
         <p id="accountSearchEmpty" class="mt-6 hidden rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">No accounts match your search.</p>
 
-        <section id="recentActivity" class="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div class="flex items-center justify-between border-b border-slate-200 px-5 py-5 sm:px-6">
-            <div><h2 class="text-lg font-bold text-slate-900">Recent archive activity</h2><p class="mt-1 text-sm text-slate-500">Latest account connections and archive check-ins.</p></div>
+        <section id="recentActivity" class="mt-8 overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm">
+          <div class="flex items-center gap-4 border-b border-blue-200 bg-gradient-to-r from-blue-600 to-sky-500 px-5 py-5 text-white sm:px-6">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-inset ring-white/20">
+              <svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v12H7l-3 3V5Z"/><path stroke-linecap="round" d="M8 9h8M8 13h5"/></svg>
+            </span>
+            <div><h2 class="text-lg font-bold">Recent messages</h2><p class="mt-1 text-sm text-blue-50">The 15 latest messages received across all connected accounts.</p></div>
           </div>
-          <div class="overflow-x-auto">
-            <table class="w-full min-w-[720px] text-left text-sm">
-              <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500"><tr><th class="px-6 py-3">Account</th><th class="px-6 py-3">Status</th><th class="px-6 py-3">Last activity</th><th class="px-6 py-3 text-right">Action</th></tr></thead>
-              <tbody id="recentActivityRows" class="divide-y divide-slate-100"></tbody>
-            </table>
-          </div>
-          <p id="recentActivityEmpty" class="hidden p-6 text-center text-sm text-slate-500">Activity will appear after you connect a Telegram account.</p>
+          <div id="recentMessagesLoading" class="p-8 text-center text-sm text-slate-500" role="status">Loading recent messages…</div>
+          <div id="recentMessages" class="hidden max-h-[18rem] divide-y divide-slate-100 overflow-y-scroll overscroll-contain"></div>
+          <p id="recentMessagesEmpty" class="hidden p-8 text-center text-sm text-slate-500">No received messages have been archived yet.</p>
+          <p id="recentMessagesError" class="hidden p-6 text-center text-sm text-red-600">Unable to load recent messages.</p>
         </section>
+
       </section>
 
       <section id="archiveView" class="hidden">

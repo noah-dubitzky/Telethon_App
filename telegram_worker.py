@@ -245,6 +245,7 @@ class ActiveClientManager:
             "channel_name": channel_name,
             "channel_id": channel_id,
             "is_channel_post": bool(event.is_channel and not event.is_group),
+            "is_outgoing": bool(event.out),
             "text": (event.raw_text or "").strip() or " ",
             "media": {k: v for k, v in media.items() if not k.startswith("_")} if media else None,
             "timestamp": event.date.astimezone(self.timezone).strftime("%Y-%m-%d %H:%M:%S"),

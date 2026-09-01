@@ -60,6 +60,10 @@ function renderMessage(msg){
 
     // Fixed media width
     const mediaWidth = 280;
+    const numericMessageId = Number(msg.message_id);
+    const messageAnchor = Number.isSafeInteger(numericMessageId) && numericMessageId > 0
+        ? ` id="message-${numericMessageId}" data-message-id="${numericMessageId}"`
+        : "";
 
     date_header = "";
 
@@ -92,7 +96,7 @@ function renderMessage(msg){
 
     return `
     ${date_header}
-    <article class="message bg-blue-400 rounded-lg p-2 m-3 block p-6 border-0 shadow-md" style="width:${mediaWidth}px;">
+    <article${messageAnchor} class="message bg-blue-400 rounded-lg p-2 m-3 block p-6 border-0 shadow-md transition-all duration-300" style="width:${mediaWidth}px;">
         <div class="flex flex-col items-start">
             <span class="sender" style="display:none;">${msg.sender_name || ""}</span>
             <div class="media">${mediaHTML}</div>
@@ -101,6 +105,19 @@ function renderMessage(msg){
         </div>
     </article>
     `;
+}
+
+function focusMessage(messageId) {
+    const numericMessageId = Number(messageId);
+    if (!Number.isSafeInteger(numericMessageId) || numericMessageId <= 0) return false;
+    const target = document.getElementById(`message-${numericMessageId}`);
+    if (!target) return false;
+    target.scrollIntoView({ block: "center", behavior: "auto" });
+    target.classList.add("ring-4", "ring-amber-300", "ring-offset-2");
+    window.setTimeout(function () {
+        target.classList.remove("ring-4", "ring-amber-300", "ring-offset-2");
+    }, 3000);
+    return true;
 }
 
 function updateNewMessages(msg){
@@ -134,6 +151,7 @@ window.Helpers = {
   cleanMediaPath,
   compareDates,
   renderMessage,
+  focusMessage,
   updateNewMessages,
   scrollMessagesToBottom
 };

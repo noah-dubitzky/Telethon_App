@@ -36,6 +36,13 @@
           element.textContent = data.user.email;
         });
 
+      const emailInitial = String(data.user.email || '').trim().charAt(0).toUpperCase() || '?';
+      document
+        .querySelectorAll('[data-user-initial]')
+        .forEach(function (element) {
+          element.textContent = emailInitial;
+        });
+
       document.documentElement.style.visibility = '';
 
       document.dispatchEvent(
