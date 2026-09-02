@@ -125,6 +125,31 @@ test('all messages search runs on Enter, identifies direction, and paginates res
   assert.match(source, /popstate/);
 });
 
+test('people directory lists incoming direct and channel senders across owned accounts', () => {
+  const route = read('../routes/messages.get.js');
+  const peopleRoute = route.match(/router\.get\('\/senders'[\s\S]*?router\.get\('\/senders\/:externalId'/)[0];
+  assert.match(peopleRoute, /ta\.id = s\.telegram_account_id AND ta\.user_id = \?/);
+  assert.match(peopleRoute, /m\.sender_id = s\.id AND m\.telegram_account_id = s\.telegram_account_id/);
+  assert.match(peopleRoute, /m\.is_outgoing = FALSE/);
+  assert.doesNotMatch(peopleRoute, /m\.channel_id IS NULL/);
+  assert.match(peopleRoute, /s\.telegram_account_id/);
+  assert.match(peopleRoute, /MAX\(m\.sent_at\) AS latest_message_time/);
+});
+
+test('people page loads, filters, and links senders with Telegram account context', () => {
+  const html = read('desktop/people.html');
+  const source = read('scripts/people.js');
+  assert.match(html, /session_guard\.js/);
+  assert.match(html, /id="peopleSearch"/);
+  assert.match(html, /id="peopleList"/);
+  assert.match(html, /aria-current="page"/);
+  assert.match(source, /\/messages\/senders/);
+  assert.match(source, /telegram_account_id/);
+  assert.match(source, /\/desktop\/sender\.html/);
+  assert.match(source, /latest_message_time/);
+  assert.match(source, /toLocaleLowerCase/);
+});
+
 test('conversation links load and focus an ownership-scoped 25-message context on each side', () => {
   const route = read('../routes/messages.get.js');
   const api = read('scripts/messages_api.js');

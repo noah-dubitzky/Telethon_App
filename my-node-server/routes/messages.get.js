@@ -177,11 +177,16 @@ router.get('/senders', async (req, res) => {
     const scoped = await selection(req, res, 's');
     if (!scoped) return;
     const [rows] = await pool.query(
-      `SELECT DISTINCT s.id, s.external_sender_id, s.name, s.phone
+      `SELECT s.id, s.telegram_account_id, s.external_sender_id, s.name, s.phone,
+              ta.display_name AS account_name, ta.phone_number AS account_phone,
+              MAX(m.sent_at) AS latest_message_time
        FROM senders s
        JOIN telegram_accounts ta ON ta.id = s.telegram_account_id AND ta.user_id = ?
        JOIN messages m ON m.sender_id = s.id AND m.telegram_account_id = s.telegram_account_id
-       WHERE m.channel_id IS NULL ${scoped.sql} ORDER BY s.id DESC`,
+       WHERE m.is_outgoing = FALSE ${scoped.sql}
+       GROUP BY s.id, s.telegram_account_id, s.external_sender_id, s.name, s.phone,
+                ta.display_name, ta.phone_number
+       ORDER BY latest_message_time DESC, s.id DESC`,
       [req.auth.userId, ...scoped.params]
     );
     res.json(rows);
