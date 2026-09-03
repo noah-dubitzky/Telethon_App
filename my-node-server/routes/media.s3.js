@@ -15,6 +15,56 @@ function validId(value) {
   return /^\d+$/.test(String(value || '')) && String(value) !== '0';
 }
 
+router.get('/', async (req, res) => {
+  const requestedType = typeof req.query.type === 'string' ? req.query.type : 'all';
+  const typeGroups = {
+    all: [],
+    images: ['images'],
+    videos: ['videos'],
+    documents: ['documents'],
+    audio: ['audio', 'voice']
+  };
+  if (!Object.hasOwn(typeGroups, requestedType)) {
+    return res.status(400).json({ error: 'Unsupported media type' });
+  }
+
+  const parsedLimit = Number.parseInt(req.query.limit || '50', 10);
+  const parsedOffset = Number.parseInt(req.query.offset || '0', 10);
+  const limit = Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 50, 1), 100);
+  const offset = Math.max(Number.isFinite(parsedOffset) ? parsedOffset : 0, 0);
+  const selectedTypes = typeGroups[requestedType];
+  const typeSql = selectedTypes.length
+    ? ` AND md.media_type IN (${selectedTypes.map(() => '?').join(', ')})`
+    : '';
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT md.id AS media_id, md.message_id, md.original_filename, md.display_name,
+              md.mime_type, md.file_size, md.media_type,
+              m.sent_at, m.is_outgoing, m.telegram_chat_id, m.telegram_account_id,
+              ta.display_name AS account_name, ta.phone_number AS account_phone,
+              s.id AS sender_id, s.name AS sender_name, s.phone AS sender_phone,
+              s.external_sender_id, c.id AS channel_id, c.name AS channel_name
+       FROM media md
+       JOIN messages m ON m.id = md.message_id
+       JOIN telegram_accounts ta
+         ON ta.id = m.telegram_account_id AND ta.user_id = ?
+       LEFT JOIN senders s
+         ON s.id = m.sender_id AND s.telegram_account_id = m.telegram_account_id
+       LEFT JOIN channels c
+         ON c.id = m.channel_id AND c.telegram_account_id = m.telegram_account_id
+       WHERE 1 = 1${typeSql}
+       ORDER BY m.sent_at DESC, md.id DESC
+       LIMIT ? OFFSET ?`,
+      [req.auth.userId, ...selectedTypes, limit, offset]
+    );
+    return res.json({ media: rows, type: requestedType, limit, offset, has_more: rows.length === limit });
+  } catch (error) {
+    console.error(`Media library lookup failed: user=${req.auth.userId} reason=${error.code || 'unknown'}`);
+    return res.status(500).json({ error: 'Unable to load media library' });
+  }
+});
+
 const OWNED_MEDIA_SQL = `
   SELECT md.id, md.path, md.s3_key, md.original_filename, md.display_name,
          md.mime_type, md.file_size, md.media_type,

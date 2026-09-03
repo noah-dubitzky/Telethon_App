@@ -150,6 +150,32 @@ test('people page loads, filters, and links senders with Telegram account contex
   assert.match(source, /toLocaleLowerCase/);
 });
 
+test('channel directory route returns active channels across owned Telegram accounts', () => {
+  const route = read('../routes/messages.get.js');
+  const channelRoute = route.match(/router\.get\('\/channels'[\s\S]*?async function messagesForEntity/)[0];
+  assert.match(channelRoute, /ta\.id = c\.telegram_account_id AND ta\.user_id = \?/);
+  assert.match(channelRoute, /m\.channel_id = c\.id AND m\.telegram_account_id = c\.telegram_account_id/);
+  assert.match(channelRoute, /m\.is_outgoing = FALSE/);
+  assert.match(channelRoute, /c\.telegram_account_id/);
+  assert.match(channelRoute, /MAX\(m\.sent_at\) AS latest_message_time/);
+  assert.match(channelRoute, /COUNT\(m\.id\) AS message_count/);
+});
+
+test('channels page loads, filters, and links channels with Telegram account context', () => {
+  const html = read('desktop/archive-channels.html');
+  const source = read('scripts/archive_channels.js');
+  assert.match(html, /session_guard\.js/);
+  assert.match(html, /id="channelSearch"/);
+  assert.match(html, /id="channelDirectory"/);
+  assert.match(html, /aria-current="page"/);
+  assert.match(source, /\/messages\/channels/);
+  assert.match(source, /telegram_account_id/);
+  assert.match(source, /\/desktop\/channels\.html/);
+  assert.match(source, /latest_message_time/);
+  assert.match(source, /message_count/);
+  assert.match(source, /toLocaleLowerCase/);
+});
+
 test('conversation links load and focus an ownership-scoped 25-message context on each side', () => {
   const route = read('../routes/messages.get.js');
   const api = read('scripts/messages_api.js');
@@ -169,4 +195,20 @@ test('conversation links load and focus an ownership-scoped 25-message context o
     assert.match(html, /getMessageContext/);
     assert.match(html, /Helpers\.focusMessage/);
   }
+});
+
+test('desktop sender conversation uses Telegram-style directional message bubbles', () => {
+  const route = read('../routes/messages.get.js');
+  const html = read('desktop/sender.html');
+  const helpers = read('scripts/message_handling_helpers.js');
+  assert.match(route, /m\.is_outgoing/);
+  assert.match(html, /bg-\[#dfe7ed\]/);
+  assert.match(html, /id="download-messages"/);
+  assert.match(html, /id="account-back-link"/);
+  assert.match(html, /id="messages"/);
+  assert.match(helpers, /const outgoing = msg\.is_outgoing/);
+  assert.match(helpers, /justify-end/);
+  assert.match(helpers, /justify-start/);
+  assert.match(helpers, /bg-\[#d9fdd3\]/);
+  assert.match(helpers, /Helpers\.cleanMediaPath/);
 });

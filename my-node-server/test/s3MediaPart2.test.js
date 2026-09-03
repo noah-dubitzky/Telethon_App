@@ -36,6 +36,30 @@ test('media lifecycle routes require authentication and ownership joins', () => 
   assert.match(source, /router\.delete\('\/:id'/);
 });
 
+test('media library listing is ownership scoped, typed, and paginated', () => {
+  const source = read('routes/media.s3.js');
+  const listing = source.slice(source.indexOf("router.get('/',"), source.indexOf('const OWNED_MEDIA_SQL'));
+  assert.match(listing, /ta\.id = m\.telegram_account_id AND ta\.user_id = \?/);
+  assert.match(listing, /md\.media_type IN/);
+  assert.match(listing, /ORDER BY m\.sent_at DESC, md\.id DESC/);
+  assert.match(listing, /LIMIT \? OFFSET \?/);
+  assert.match(listing, /has_more/);
+  assert.doesNotMatch(listing, /md\.s3_key/);
+});
+
+test('media library UI uses protected content URLs and account-aware message links', () => {
+  const html = read('public/desktop/media-library.html');
+  const source = read('public/scripts/media_library.js');
+  assert.match(html, /session_guard\.js/);
+  assert.match(html, /id="mediaTabs"/);
+  assert.match(html, /id="mediaGrid"/);
+  assert.match(source, /\/api\/media\?type=/);
+  assert.match(source, /firstLoad \? 50 : 25/);
+  assert.match(source, /\/api\/media\/\$\{encodeURIComponent\(item\.media_id\)\}\/content/);
+  assert.match(source, /telegram_account_id/);
+  assert.match(source, /message_id/);
+});
+
 test('deletion locks metadata, deletes storage first, and retains the message', () => {
   const source = read('routes/media.s3.js');
   assert.match(source, /FOR UPDATE/);

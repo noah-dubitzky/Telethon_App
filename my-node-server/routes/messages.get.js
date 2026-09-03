@@ -143,7 +143,7 @@ async function selection(req, res, alias) {
 }
 
 const MESSAGE_COLUMNS = `
-  m.id AS message_id, m.sent_at, s.name AS sender_name,
+  m.id AS message_id, m.telegram_chat_id, m.is_outgoing, m.sent_at, s.name AS sender_name,
   s.phone AS sender_phone, s.external_sender_id,
   c.name AS channel_name, m.text, md.id AS media_id, md.path AS media_path, md.s3_key,
   md.original_filename, md.display_name AS media_display_name, md.mime_type, md.file_size, md.media_type`;
@@ -219,9 +219,16 @@ router.get('/channels', async (req, res) => {
     const scoped = await selection(req, res, 'c');
     if (!scoped) return;
     const [rows] = await pool.query(
-      `SELECT c.id, c.name FROM channels c
+      `SELECT c.id, c.telegram_account_id, c.telegram_chat_id, c.name,
+              ta.display_name AS account_name, ta.phone_number AS account_phone,
+              MAX(m.sent_at) AS latest_message_time, COUNT(m.id) AS message_count
+       FROM channels c
        JOIN telegram_accounts ta ON ta.id = c.telegram_account_id AND ta.user_id = ?
-       WHERE 1 = 1 ${scoped.sql} ORDER BY c.name ASC`,
+       JOIN messages m ON m.channel_id = c.id AND m.telegram_account_id = c.telegram_account_id
+       WHERE m.is_outgoing = FALSE ${scoped.sql}
+       GROUP BY c.id, c.telegram_account_id, c.telegram_chat_id, c.name,
+                ta.display_name, ta.phone_number
+       ORDER BY latest_message_time DESC, c.name ASC`,
       [req.auth.userId, ...scoped.params]
     );
     res.json(rows);

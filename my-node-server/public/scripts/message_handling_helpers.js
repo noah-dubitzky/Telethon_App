@@ -58,8 +58,8 @@ function renderMessage(msg){
         ? Helpers.cleanMediaPath(msg.media_path)
         : (msg.media_id && msg.s3_key ? `/api/media/${encodeURIComponent(msg.media_id)}/content` : "");
 
-    // Fixed media width
-    const mediaWidth = 280;
+    const outgoing = msg.is_outgoing === true || Number(msg.is_outgoing) === 1;
+    const mediaWidth = 320;
     const numericMessageId = Number(msg.message_id);
     const messageAnchor = Number.isSafeInteger(numericMessageId) && numericMessageId > 0
         ? ` id="message-${numericMessageId}" data-message-id="${numericMessageId}"`
@@ -76,8 +76,8 @@ function renderMessage(msg){
 
     if(Helpers.compareDates(msg.sent_at.slice(0,10), latest_sent_date) == 1){
         latest_sent_date = msg.sent_at.slice(0,10);
-        date_header = `<div class="w-full flex justify-center my-4">
-            <span class="inline-block bg-gradient-to-r from-blue-200 via-purple-100 to-pink-100 text-gray-700 px-4 py-1 rounded-full shadow text-sm font-semibold border border-blue-300">
+        date_header = `<div class="w-full flex justify-center my-5">
+            <span class="inline-block rounded-full bg-slate-700/75 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur">
                 ${latest_sent_date}
             </span>
         </div>`;
@@ -86,9 +86,9 @@ function renderMessage(msg){
     let mediaHTML = "";
     if (media){
     if (msg.media_type === 'images' || String(msg.mime_type || '').startsWith('image/') || Helpers.isImage(media)){
-        mediaHTML = `<img src="${media}" alt="media" class="mt-3 max-h-80 object-contain" style="width:${mediaWidth}px;">`;
+        mediaHTML = `<img src="${media}" alt="Message attachment" class="mb-2 max-h-80 w-full rounded-xl object-cover">`;
     } else if (msg.media_type === 'videos' || String(msg.mime_type || '').startsWith('video/') || Helpers.isVideo(media)){
-        mediaHTML = `<video src="${media}" controls class="mt-3 max-h-96" style="width:${mediaWidth}px;"></video>`;
+        mediaHTML = `<video src="${media}" controls class="mb-2 max-h-96 w-full rounded-xl"></video>`;
     } else {
         mediaHTML = `<a href="${media}" target="_blank" class="mt-3 inline-block text-blue-600 hover:underline">Download attachment</a>`;
     }
@@ -96,14 +96,16 @@ function renderMessage(msg){
 
     return `
     ${date_header}
-    <article${messageAnchor} class="message bg-blue-400 rounded-lg p-2 m-3 block p-6 border-0 shadow-md transition-all duration-300" style="width:${mediaWidth}px;">
+    <div class="flex w-full ${outgoing ? 'justify-end' : 'justify-start'} px-3 py-1 sm:px-5">
+      <article${messageAnchor} class="message relative max-w-[82%] rounded-2xl px-3.5 py-2.5 shadow-sm ring-1 ring-inset transition-all duration-300 sm:max-w-[70%] ${outgoing ? 'rounded-br-md bg-[#d9fdd3] text-slate-900 ring-emerald-200' : 'rounded-bl-md bg-white text-slate-900 ring-slate-200'}" style="width:min(${mediaWidth}px, 100%);">
         <div class="flex flex-col items-start">
             <span class="sender" style="display:none;">${msg.sender_name || ""}</span>
             <div class="media">${mediaHTML}</div>
-            <p class="text w-full text-gray-800 whitespace-pre-wrap break-words">${msg.text || ""}</p>
-            <span class="time self-end text-xs text-gray-900 hover:text-gray-900">${time_sent_12hours.slice(11,22)}</span>
+            <p class="text w-full whitespace-pre-wrap break-words text-[15px] leading-5">${msg.text || ""}</p>
+            <span class="time ml-4 self-end text-[11px] font-medium ${outgoing ? 'text-emerald-800/70' : 'text-slate-400'}">${time_sent_12hours.slice(11,22)}</span>
         </div>
-    </article>
+      </article>
+    </div>
     `;
 }
 
