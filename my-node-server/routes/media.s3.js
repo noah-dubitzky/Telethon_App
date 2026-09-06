@@ -44,13 +44,19 @@ router.get('/', async (req, res) => {
               m.sent_at, m.is_outgoing, m.telegram_chat_id, m.telegram_account_id,
               ta.display_name AS account_name, ta.phone_number AS account_phone,
               s.id AS sender_id, s.name AS sender_name, s.phone AS sender_phone,
-              s.external_sender_id, c.id AS channel_id, c.name AS channel_name
+              s.external_sender_id,
+              peer.id AS peer_id, peer.name AS peer_name, peer.phone AS peer_phone,
+              peer.external_sender_id AS peer_external_sender_id,
+              c.id AS channel_id, c.name AS channel_name
        FROM media md
        JOIN messages m ON m.id = md.message_id
        JOIN telegram_accounts ta
          ON ta.id = m.telegram_account_id AND ta.user_id = ?
        LEFT JOIN senders s
          ON s.id = m.sender_id AND s.telegram_account_id = m.telegram_account_id
+       LEFT JOIN senders peer
+         ON peer.telegram_account_id = m.telegram_account_id
+        AND BINARY peer.external_sender_id = BINARY CAST(m.telegram_chat_id AS CHAR)
        LEFT JOIN channels c
          ON c.id = m.channel_id AND c.telegram_account_id = m.telegram_account_id
        WHERE 1 = 1${typeSql}

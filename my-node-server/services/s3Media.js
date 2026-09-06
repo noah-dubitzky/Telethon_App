@@ -1,5 +1,6 @@
-const { DeleteObjectCommand, GetObjectCommand, S3Client } = require('@aws-sdk/client-s3');
+const { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { randomUUID } = require('crypto');
 
 let client;
 
@@ -52,8 +53,52 @@ async function deleteObject(media) {
   await s3Client().send(new DeleteObjectCommand({ Bucket: bucket, Key: media.s3_key }));
 }
 
+async function uploadPdfExport({ pdfBuffer, userId, accountId, filename }) {
+  if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.subarray(0, 5).toString('ascii') !== '%PDF-') {
+    throw new Error('A valid PDF buffer is required');
+  }
+  const { bucket } = configuration();
+  const safeName = safeDownloadName(filename).replace(/\s+/g, '_');
+  const storageKey = `users/${String(userId)}/telegram_accounts/${String(accountId)}/pdf_exports/${randomUUID()}/${safeName}`;
+  await s3Client().send(new PutObjectCommand({
+    Bucket: bucket,
+    Key: storageKey,
+    Body: pdfBuffer,
+    ContentType: 'application/pdf',
+    ContentDisposition: `attachment; filename="${safeName}"`
+  }));
+  return { storageKey, fileSize: pdfBuffer.length };
+}
+
+async function deletePdfExportObject({ storageKey, userId, accountId }) {
+  assertOwnedKey(storageKey, userId, accountId);
+  const { bucket } = configuration();
+  await s3Client().send(new DeleteObjectCommand({ Bucket: bucket, Key: storageKey }));
+}
+
+async function createPdfExportAccessUrl({ storageKey, userId, accountId, filename }, { expiresIn = 300 } = {}) {
+  assertOwnedKey(storageKey, userId, accountId);
+  const { bucket } = configuration();
+  const command = new GetObjectCommand({
+    Bucket: bucket,
+    Key: storageKey,
+    ResponseContentType: 'application/pdf',
+    ResponseContentDisposition: `attachment; filename="${safeDownloadName(filename)}"`
+  });
+  return getSignedUrl(s3Client(), command, { expiresIn });
+}
+
 function resetClientForTests() {
   client = undefined;
 }
 
-module.exports = { assertOwnedKey, createAccessUrl, deleteObject, safeDownloadName, resetClientForTests };
+module.exports = {
+  assertOwnedKey,
+  createAccessUrl,
+  deleteObject,
+  uploadPdfExport,
+  deletePdfExportObject,
+  createPdfExportAccessUrl,
+  safeDownloadName,
+  resetClientForTests
+};

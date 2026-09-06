@@ -17,6 +17,7 @@ const io = new Server(server);
 
 const filtersRouter = require('./routes/filters');
 const pdfExportRouter = require('./routes/pdf.export');
+const pdfExportsRouter = require('./routes/pdf.exports');
 const authRouter = require('./routes/auth');
 const telegramAccountsRouter = require('./routes/telegram-accounts');
 const mediaRouter = require('./routes/media');
@@ -83,6 +84,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/telegram-accounts', telegramAccountsRouter);
 app.use('/api/telegram-connect', telegramConnectRouter);
 app.use('/api/media', s3MediaRouter);
+app.use('/api/pdf-exports', pdfExportsRouter);
 app.use('/internal/worker', workerInternalRouter);
 app.use('/export', pdfExportRouter);
 

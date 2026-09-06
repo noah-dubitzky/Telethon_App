@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../public/scripts/db');
 const requireAuth = require('../middleware/requireAuth');
 const { resolveOwnedAccount } = require('../middleware/archiveOwnership');
+const s3Media = require('../services/s3Media');
 
 router.use(requireAuth);
 
@@ -32,8 +33,71 @@ function getRequestOrigin(req) {
   return `${protocol}://${req.get('host')}`;
 }
 
+async function loadExportMetadata(connection, { accountId, entityType, entityId, messageIds }) {
+  if (!messageIds.length) throw new Error('The rendered PDF contains no archived messages');
+  const placeholders = messageIds.map(() => '?').join(', ');
+  const entityColumn = entityType === 'sender' ? 'm.sender_id' : 'm.channel_id';
+  const [messages] = await connection.query(
+    `SELECT m.id, m.sent_at, m.sender_id, s.name AS sender_name
+     FROM messages m
+     LEFT JOIN senders s
+       ON s.id = m.sender_id AND s.telegram_account_id = m.telegram_account_id
+     WHERE m.telegram_account_id = ? AND ${entityColumn} = ?
+       AND m.id IN (${placeholders})
+     ORDER BY m.sent_at ASC, m.id ASC`,
+    [accountId, entityId, ...messageIds]
+  );
+  if (messages.length !== messageIds.length) {
+    throw new Error('The rendered PDF contains messages outside the selected conversation');
+  }
+  const senders = new Map();
+  messages.forEach(message => {
+    if (!message.sender_id) return;
+    const key = String(message.sender_id);
+    const existing = senders.get(key) || {
+      senderId: message.sender_id,
+      senderName: message.sender_name,
+      messageCount: 0
+    };
+    existing.messageCount += 1;
+    senders.set(key, existing);
+  });
+  return {
+    firstMessageId: messages[0].id,
+    lastMessageId: messages[messages.length - 1].id,
+    messageCount: messages.length,
+    senders: [...senders.values()]
+  };
+}
+
+async function savePdfExport(connection, exportData) {
+  const [result] = await connection.query(
+    `INSERT INTO pdf_exports
+       (user_id, telegram_account_id, conversation_type, telegram_chat_id,
+        sender_id, channel_id, export_name, storage_key, file_size,
+        first_message_id, last_message_id, message_count)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [exportData.userId, exportData.accountId, exportData.conversationType,
+      exportData.telegramChatId, exportData.senderId, exportData.channelId,
+      exportData.filename, exportData.storageKey, exportData.fileSize,
+      exportData.firstMessageId, exportData.lastMessageId, exportData.messageCount]
+  );
+  for (const sender of exportData.senders) {
+    await connection.query(
+      `INSERT INTO pdf_export_senders
+         (pdf_export_id, telegram_account_id, sender_id, sender_name_at_export, message_count)
+       VALUES (?, ?, ?, ?, ?)`,
+      [result.insertId, exportData.accountId, sender.senderId,
+        sender.senderName, sender.messageCount]
+    );
+  }
+  return result.insertId;
+}
+
 router.get('/channel-pdf', async (req, res) => {
   let browser;
+  let uploadedPdf;
+  let persisted = false;
 
   try {
     const entityId = String(req.query.id || '').trim();
@@ -47,9 +111,14 @@ router.get('/channel-pdf', async (req, res) => {
 
     const accountId = await resolveOwnedAccount(req, res);
     if (accountId === undefined) return;
+    if (accountId === null) {
+      return res.status(400).json({ error: 'A Telegram account is required for PDF exports' });
+    }
     const table = entityType === 'sender' ? 'senders' : 'channels';
     const [ownedEntities] = await pool.query(
-      `SELECT entity.name FROM ${table} entity
+      `SELECT entity.name,
+              ${entityType === 'sender' ? 'entity.external_sender_id' : 'entity.telegram_chat_id'} AS telegram_chat_id
+       FROM ${table} entity
        JOIN telegram_accounts ta ON ta.id = entity.telegram_account_id
        WHERE entity.id = ? AND ta.user_id = ?${accountId === null ? '' : ' AND entity.telegram_account_id = ?'} LIMIT 1`,
       accountId === null ? [entityId, req.auth.userId] : [entityId, req.auth.userId, accountId]
@@ -64,6 +133,7 @@ router.get('/channel-pdf', async (req, res) => {
     const pagePath = view === 'mobile' ? `/mobile/${pageName}` : `/${pageName}`;
     const pageUrl = new URL(pagePath, getRequestOrigin(req));
     pageUrl.searchParams.set('id', entityId);
+    pageUrl.searchParams.set('telegram_account_id', accountId);
     if (entityName) pageUrl.searchParams.set('name', entityName);
     if (entityType === 'sender') {
       pageUrl.searchParams.set('external_id', String(req.query.external_id || ''));
@@ -171,6 +241,10 @@ router.get('/channel-pdf', async (req, res) => {
       console.error('[PDF page timeout diagnostics]', diagnostics);
       throw error;
     }
+
+    const exportedMessageIds = await page.$$eval('[data-message-id]', nodes =>
+      nodes.map(node => node.getAttribute('data-message-id')).filter(Boolean)
+    );
 
     await page.addStyleTag({
       content: `
@@ -307,11 +381,55 @@ router.get('/channel-pdf', async (req, res) => {
     }
 
     const filename = `${sanitizeFilenamePart(entityName, `${entityType}_${entityId}`)}_messages.pdf`;
+    const connection = await pool.getConnection();
+    try {
+      const metadata = await loadExportMetadata(connection, {
+        accountId,
+        entityType,
+        entityId,
+        messageIds: exportedMessageIds
+      });
+      uploadedPdf = await s3Media.uploadPdfExport({
+        pdfBuffer,
+        userId: req.auth.userId,
+        accountId,
+        filename
+      });
+      await connection.beginTransaction();
+      await savePdfExport(connection, {
+        ...metadata,
+        userId: req.auth.userId,
+        accountId,
+        conversationType: entityType === 'sender' ? 'direct' : 'channel',
+        telegramChatId: String(ownedEntities[0].telegram_chat_id),
+        senderId: entityType === 'sender' ? entityId : null,
+        channelId: entityType === 'channel' ? entityId : null,
+        filename,
+        storageKey: uploadedPdf.storageKey,
+        fileSize: uploadedPdf.fileSize
+      });
+      await connection.commit();
+      persisted = true;
+    } catch (error) {
+      await connection.rollback().catch(() => {});
+      throw error;
+    } finally {
+      connection.release();
+    }
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', getContentDisposition(filename));
     res.setHeader('Content-Length', pdfBuffer.length);
     res.end(pdfBuffer);
   } catch (err) {
+    if (uploadedPdf && !persisted) {
+      await s3Media.deletePdfExportObject({
+        storageKey: uploadedPdf.storageKey,
+        userId: req.auth.userId,
+        accountId: String(req.query.telegram_account_id || '')
+      }).catch(cleanupError => {
+        console.error('Failed to clean up orphaned PDF export:', cleanupError.code || cleanupError.message);
+      });
+    }
     console.error('Error exporting channel PDF:', err);
     res.status(500).json({
       error: 'Unable to export channel PDF.',

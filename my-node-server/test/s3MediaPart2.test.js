@@ -55,9 +55,15 @@ test('media library UI uses protected content URLs and account-aware message lin
   assert.match(html, /id="mediaGrid"/);
   assert.match(source, /\/api\/media\?type=/);
   assert.match(source, /firstLoad \? 50 : 25/);
+  assert.match(source, /scroll\.mediaLibrary/);
+  assert.match(source, /distanceFromBottom <= 8/);
+  assert.doesNotMatch(html, /id="loadMoreMedia"/);
   assert.match(source, /\/api\/media\/\$\{encodeURIComponent\(item\.media_id\)\}\/content/);
   assert.match(source, /telegram_account_id/);
   assert.match(source, /message_id/);
+  assert.match(source, /Open conversation/);
+  assert.match(source, /peer_id/);
+  assert.match(source, /peer_external_sender_id/);
 });
 
 test('deletion locks metadata, deletes storage first, and retains the message', () => {
@@ -87,4 +93,44 @@ test('message rendering uses authenticated media content endpoint for S3 records
 test('Part 2 migration adds a separate user-editable display label', () => {
   const migration = read('mysql_db/migrations/006_s3_media_lifecycle.sql');
   assert.match(migration, /ADD COLUMN `display_name` varchar\(255\) NULL/);
+});
+
+test('generated PDF exports upload before persistence and clean up failed saves', () => {
+  const exporter = read('routes/pdf.export.js');
+  const storage = read('services/s3Media.js');
+  assert.match(exporter, /loadExportMetadata/);
+  assert.match(exporter, /page\.\$\$eval\('\[data-message-id\]'/);
+  assert.match(exporter, /s3Media\.uploadPdfExport/);
+  assert.match(exporter, /INSERT INTO pdf_exports/);
+  assert.match(exporter, /INSERT INTO pdf_export_senders/);
+  assert.match(exporter, /await connection\.commit\(\)[\s\S]*res\.end\(pdfBuffer\)/);
+  assert.match(exporter, /uploadedPdf && !persisted/);
+  assert.match(exporter, /deletePdfExportObject/);
+  assert.match(storage, /PutObjectCommand/);
+  assert.match(storage, /pdf_exports\/\$\{randomUUID\(\)\}/);
+});
+
+test('saved PDF content and deletion remain authenticated and storage-backed', () => {
+  const route = read('routes/pdf.exports.js');
+  const storage = read('services/s3Media.js');
+  assert.match(route, /router\.get\('\/:id\/content'/);
+  assert.match(route, /pe\.id = \? AND pe\.user_id = \?/);
+  assert.match(route, /createPdfExportAccessUrl/);
+  assert.match(route, /deletePdfExportObject[\s\S]*DELETE FROM pdf_exports/);
+  assert.match(storage, /ResponseContentType: 'application\/pdf'/);
+});
+
+test('media library renders paginated PDF exports with senders and lifecycle controls', () => {
+  const html = read('public/desktop/media-library.html');
+  const source = read('public/scripts/media_library.js');
+  assert.match(html, /id="pdfExportsHeading"/);
+  assert.match(html, /id="pdfExportList"/);
+  assert.match(html, /id="pdfExportsLoading"/);
+  assert.match(html, /id="loadMorePdfExports"/);
+  assert.match(source, /\/api\/pdf-exports\?limit=25&offset=/);
+  assert.match(source, /item\.senders/);
+  assert.match(source, /\/api\/pdf-exports\/\$\{encodeURIComponent\(item\.id\)\}\/content/);
+  assert.match(source, /method: 'DELETE'/);
+  assert.match(source, /pdfConversationLink/);
+  assert.match(html, /id="mediaGrid"[^>]*max-h-\[24rem\][^>]*overflow-y-scroll[^>]*lg:grid-cols-3/);
 });

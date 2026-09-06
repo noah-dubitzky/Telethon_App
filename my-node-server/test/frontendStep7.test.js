@@ -212,3 +212,39 @@ test('desktop sender conversation uses Telegram-style directional message bubble
   assert.match(helpers, /bg-\[#d9fdd3\]/);
   assert.match(helpers, /Helpers\.cleanMediaPath/);
 });
+
+test('PDF export migration tracks conversation ownership and every included sender', () => {
+  const migration = read('../mysql_db/migrations/009_pdf_exports.sql');
+  const verification = read('../mysql_db/migrations/009_pdf_exports_verify.sql');
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS `pdf_exports`/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS `pdf_export_senders`/);
+  assert.match(migration, /information_schema`.`statistics/);
+  assert.match(migration, /uk_telegram_accounts_id_user/);
+  assert.match(migration, /uk_messages_account_internal/);
+  assert.match(migration, /`conversation_type` enum\('direct','channel'\)/);
+  assert.match(migration, /`telegram_chat_id` bigint NOT NULL/);
+  assert.match(migration, /FOREIGN KEY \(`telegram_account_id`, `user_id`\)/);
+  assert.match(migration, /FOREIGN KEY \(`telegram_account_id`, `sender_id`\)/);
+  assert.match(migration, /FOREIGN KEY \(`telegram_account_id`, `channel_id`\)/);
+  assert.match(migration, /`sender_name_at_export`/);
+  assert.match(migration, /PRIMARY KEY \(`pdf_export_id`, `sender_id`\)/);
+  assert.match(verification, /pdf_export_sender_count/);
+});
+
+test('PDF export API creates, retrieves, and deletes only owned export metadata', () => {
+  const route = read('../routes/pdf.exports.js');
+  const server = read('../server.js');
+  assert.match(route, /router\.use\(requireAuth\)/);
+  assert.match(route, /router\.get\('\/'/);
+  assert.match(route, /router\.get\('\/:id'/);
+  assert.match(route, /router\.post\('\/'/);
+  assert.match(route, /router\.delete\('\/:id'/);
+  assert.match(route, /WHERE pe\.user_id = \?/);
+  assert.match(route, /DELETE FROM pdf_exports WHERE id = \? AND user_id = \?/);
+  assert.match(route, /SELECT id FROM telegram_accounts WHERE id = \? AND user_id = \?/);
+  assert.match(route, /Exported sender counts must equal the PDF message count/);
+  assert.match(route, /beginTransaction/);
+  assert.match(route, /INSERT INTO pdf_export_senders/);
+  assert.doesNotMatch(route, /storage_key: row\.storage_key/);
+  assert.match(server, /app\.use\('\/api\/pdf-exports', pdfExportsRouter\)/);
+});
