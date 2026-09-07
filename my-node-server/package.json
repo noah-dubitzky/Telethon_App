@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node test/sessionEncryption.test.js && node test/frontendStep6.test.js && node test/frontendStep7.test.js && node test/backendStep8.test.js && node test/frontendStep9.test.js && node test/accountControls.test.js && node test/realtimeStep10.test.js && node test/s3MediaStep10.test.js && node test/s3MediaPart2.test.js",
+    "test": "node test/sessionEncryption.test.js && node test/frontendStep6.test.js && node test/frontendStep7.test.js && node test/backendStep8.test.js && node test/frontendStep9.test.js && node test/accountControls.test.js && node test/realtimeStep10.test.js && node test/s3MediaStep10.test.js && node test/s3MediaPart2.test.js && node test/profileEditing.test.cjs",
     "test:s3-mysql": "node test/mysqlS3Media.integration.test.js",
     "test:s3-lifecycle": "node test/s3MediaLifecycle.integration.test.js"
   },
@@ -21,6 +21,7 @@
     "express-mysql-session": "^3.0.3",
     "express-session": "^1.19.0",
     "mysql2": "^3.15.0",
+    "nodemailer": "^10.0.0",
     "puppeteer": "^25.2.0",
     "socket.io": "^4.8.1"
   }

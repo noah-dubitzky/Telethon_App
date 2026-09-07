@@ -8,11 +8,18 @@ function wrapSessionMiddleware(middleware) {
   return (socket, next) => middleware(socket.request, {}, next);
 }
 
-function createRealtime({ io, sessionMiddleware, sessionStore }) {
+function createRealtime({ io, sessionMiddleware, sessionStore, isSessionValid }) {
   io.use(wrapSessionMiddleware(sessionMiddleware));
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const userId = Number(socket.request.session?.userId);
     if (!Number.isSafeInteger(userId) || userId <= 0) {
+      return next(new Error('Authentication required'));
+    }
+    try {
+      if (isSessionValid && !await isSessionValid(socket.request.session)) {
+        return next(new Error('Authentication required'));
+      }
+    } catch (_) {
       return next(new Error('Authentication required'));
     }
     socket.data.userId = userId;
@@ -41,7 +48,8 @@ function createRealtime({ io, sessionMiddleware, sessionStore }) {
     for (const socket of sockets) {
       try {
         const currentSession = await getSession(socket.data.sessionId);
-        if (Number(currentSession?.userId) !== Number(userId)) {
+        if (Number(currentSession?.userId) !== Number(userId)
+          || (isSessionValid && !await isSessionValid(currentSession))) {
           socket.disconnect(true);
           continue;
         }
@@ -63,7 +71,12 @@ function createRealtime({ io, sessionMiddleware, sessionStore }) {
       .map((socket) => socket.disconnect(true)));
   }
 
-  return { emitToUser, disconnectSession, roomForUser };
+  async function disconnectOtherSessions(userId, sessionId) {
+    const sockets = await io.in(roomForUser(userId)).fetchSockets();
+    sockets.filter(socket => socket.data.sessionId !== sessionId).forEach(socket => socket.disconnect(true));
+  }
+
+  return { emitToUser, disconnectSession, disconnectOtherSessions, roomForUser };
 }
 
 module.exports = { createRealtime, roomForUser, wrapSessionMiddleware };

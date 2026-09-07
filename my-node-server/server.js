@@ -19,6 +19,8 @@ const filtersRouter = require('./routes/filters');
 const pdfExportRouter = require('./routes/pdf.export');
 const pdfExportsRouter = require('./routes/pdf.exports');
 const authRouter = require('./routes/auth');
+const profileRouter = require('./routes/profile');
+const { isSessionValid } = require('./services/sessionValidity');
 const telegramAccountsRouter = require('./routes/telegram-accounts');
 const mediaRouter = require('./routes/media');
 const s3MediaRouter = require('./routes/media.s3');
@@ -68,7 +70,7 @@ const sessionMiddleware = session({
   cookie: sessionCookieOptions
 });
 app.use(sessionMiddleware);
-app.locals.realtime = createRealtime({ io, sessionMiddleware, sessionStore });
+app.locals.realtime = createRealtime({ io, sessionMiddleware, sessionStore, isSessionValid });
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 // Private uploads must be intercepted before the general public static mount.
 app.use('/uploads', mediaRouter);
@@ -81,6 +83,7 @@ app.use(express.static(path.join(__dirname, 'public', 'desktop')));
 
 app.use('/api/filters', filtersRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/auth/profile', profileRouter);
 app.use('/api/telegram-accounts', telegramAccountsRouter);
 app.use('/api/telegram-connect', telegramConnectRouter);
 app.use('/api/media', s3MediaRouter);

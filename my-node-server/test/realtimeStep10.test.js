@@ -15,7 +15,7 @@ const realtime = fs.readFileSync(path.join(__dirname, '..', 'services', 'realtim
 
 assert.doesNotMatch(server, /io\.emit\s*\(/, 'private data must not be globally broadcast');
 assert.doesNotMatch(server, /app\.post\(['"]\/receive/, 'legacy unauthenticated live endpoint must be removed');
-assert.match(server, /createRealtime\(\{ io, sessionMiddleware, sessionStore \}\)/);
+assert.match(server, /createRealtime\(\{ io, sessionMiddleware, sessionStore, isSessionValid \}\)/);
 assert.match(realtime, /socket\.request\.session\?\.userId/);
 assert.match(realtime, /socket\.join\(room\)/);
 assert.match(realtime, /sessionStore\.get\(sessionId/);
@@ -106,6 +106,27 @@ class FakeIo {
   await realtimeService.disconnectSession('a1');
   assert.strictEqual(aTabOne.disconnected, true, 'logout disconnects only that browser session');
   assert.strictEqual(aTabTwo.disconnected, false, 'another valid session remains connected');
+
+  const revoked = new FakeSocket(12, 'old-version');
+  const current = new FakeSocket(12, 'new-version');
+  revoked.join('user:12');
+  current.join('user:12');
+  const securedIo = new FakeIo([revoked, current]);
+  const secured = createRealtime({
+    io: securedIo,
+    sessionMiddleware: (_request, _response, next) => next(),
+    sessionStore: { get(id, callback) { callback(null, { userId: 12, authVersion: id === 'new-version' ? 1 : 0 }); } },
+    isSessionValid: async session => session.authVersion === 1
+  });
+  await secured.emitToUser(12, 'updateMessage', {});
+  assert.strictEqual(revoked.events.length, 0, 'revoked credential versions cannot receive private events');
+  assert.strictEqual(revoked.disconnected, true);
+  assert.strictEqual(current.events.length, 1);
+  let handshakeError;
+  await securedIo.middleware[1]({ request: { session: { userId: 12, authVersion: 0 } }, data: {} }, error => { handshakeError = error; });
+  assert.ok(handshakeError, 'revoked sessions cannot open new sockets');
+  await secured.disconnectOtherSessions(12, 'new-version');
+  assert.strictEqual(current.disconnected, false, 'the initiating session remains connected');
   console.log('Step 10 realtime security tests passed');
 })().catch((error) => {
   console.error(error);

@@ -7,7 +7,7 @@ const router = express.Router();
 const MIN_PASSWORD_LENGTH = 12;
 const BCRYPT_ROUNDS = 12;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SAFE_USER_COLUMNS = 'id, email, status, created_at, updated_at';
+const SAFE_USER_COLUMNS = 'id, email, display_name, status, created_at, updated_at';
 
 function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
@@ -60,6 +60,7 @@ router.post('/register', async (req, res) => {
 
     await regenerateSession(req);
     req.session.userId = result.insertId;
+    req.session.authVersion = 0;
     await saveSession(req);
     return res.status(201).json({ user: users[0] });
   } catch (error) {
@@ -81,7 +82,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const [users] = await pool.execute(
-      `SELECT id, email, password_hash, status, created_at, updated_at
+      `SELECT id, email, display_name, password_hash, auth_version, status, created_at, updated_at
        FROM users WHERE email = ? LIMIT 1`,
       [email]
     );
@@ -95,8 +96,9 @@ router.post('/login', async (req, res) => {
 
     await regenerateSession(req);
     req.session.userId = user.id;
+    req.session.authVersion = Number(user.auth_version);
     await saveSession(req);
-    const { password_hash: _passwordHash, ...safeUser } = user;
+    const { password_hash: _passwordHash, auth_version: _authVersion, ...safeUser } = user;
     return res.json({ user: safeUser });
   } catch (error) {
     console.error('Login failed:', error && error.code ? error.code : 'unknown error');
@@ -129,7 +131,10 @@ router.post('/logout', (req, res) => {
 router.get('/me', requireAuth, async (req, res) => {
   try {
     const [users] = await pool.execute(
-      `SELECT ${SAFE_USER_COLUMNS} FROM users WHERE id = ? AND status = 'active' LIMIT 1`,
+      `SELECT ${SAFE_USER_COLUMNS},
+         UNIX_TIMESTAMP(created_at) AS created_at_unix,
+         UNIX_TIMESTAMP(updated_at) AS updated_at_unix
+       FROM users WHERE id = ? AND status = 'active' LIMIT 1`,
       [req.auth.userId]
     );
     if (!users[0]) {
