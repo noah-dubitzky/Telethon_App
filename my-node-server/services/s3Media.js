@@ -1,4 +1,4 @@
-const { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } = require('@aws-sdk/client-s3');
+const { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, ListObjectsV2Command, S3Client } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { randomUUID } = require('crypto');
 
@@ -92,7 +92,32 @@ function resetClientForTests() {
   client = undefined;
 }
 
+async function storageTotals(userId, pdfKeys = new Set()) {
+  if (!/^[1-9]\d*$/.test(String(userId))) throw new Error('Invalid storage owner');
+  const { bucket } = configuration();
+  const prefix = `users/${userId}/telegram_accounts/`;
+  let token;
+  let mediaBytes = 0;
+  let pdfBytes = 0;
+  do {
+    const page = await s3Client().send(new ListObjectsV2Command({
+      Bucket: bucket, Prefix: prefix, ContinuationToken: token
+    }));
+    for (const object of page.Contents || []) {
+      const key = object.Key || '';
+      if (!key.startsWith(prefix) || key.endsWith('/')) continue;
+      const bytes = Number(object.Size || 0);
+      if (pdfKeys.has(key) || /\.pdf$/i.test(key) || key.slice(prefix.length).split('/')[1] === 'pdf_exports') pdfBytes += bytes;
+      else mediaBytes += bytes;
+    }
+    token = page.IsTruncated ? page.NextContinuationToken : undefined;
+    if (page.IsTruncated && !token) throw new Error('Incomplete S3 listing');
+  } while (token);
+  return { mediaBytes, pdfBytes };
+}
+
 module.exports = {
+  storageTotals,
   assertOwnedKey,
   createAccessUrl,
   deleteObject,

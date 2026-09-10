@@ -11,6 +11,7 @@ const assert = require('node:assert/strict');
     const user = { id: 42, email: 'tester@example.com', status: 'active', created_at: '2026-01-01 07:00:00', created_at_unix: 1767268800, updated_at: null };
     let pendingEmail = null;
     let passwordRequests = 0;
+    let storageSettings = { save_text: true, save_photos: true, save_videos: true, save_audio: true, save_files: true, save_pdfs: true, max_file_size_mb: null };
     page.on('pageerror', error => errors.push(error.message));
     await page.setRequestInterception(true);
     page.on('request', request => {
@@ -19,6 +20,11 @@ const assert = require('node:assert/strict');
       if (url.hostname === 'cdn.tailwindcss.com') return request.respond({ contentType: 'application/javascript', body: '' });
       if (url.hostname === 'code.jquery.com') return request.respond({ contentType: 'application/javascript', body: fs.readFileSync(path.join(__dirname, '../public/scripts/jquery-3.0.0.min.js')) });
       if (url.pathname === '/api/auth/me') return json({ user });
+      if (url.pathname === '/api/storage/settings') {
+        if (request.method() === 'PUT') storageSettings = JSON.parse(request.postData());
+        return json({ settings: storageSettings });
+      }
+      if (url.pathname === '/api/storage') return json({ text_bytes: 100, media_bytes: 700, pdf_bytes: 200, total_bytes: 1000, updated_at: '2026-09-07T12:00:00Z' });
       if (url.pathname === '/api/auth/profile') return json({ email_change_available: true, pending_email: pendingEmail });
       if (url.pathname === '/api/auth/profile/name') {
         user.display_name = JSON.parse(request.postData()).display_name;
@@ -52,6 +58,20 @@ const assert = require('node:assert/strict');
     await page.addStyleTag({ content: '.hidden{display:none}' });
     assert.match(await page.$eval('#accountList', e => e.textContent), /<Test account>/);
     assert.doesNotMatch(await page.$eval('#accountList', e => e.textContent), /15551234567/);
+    await page.click('#profileTab');
+    await page.keyboard.press('ArrowRight');
+    await page.waitForFunction(() => document.querySelector('#storageTotal').textContent === '1 KB');
+    assert.equal(await page.$eval('#storageTab', e => e.getAttribute('aria-selected')), 'true');
+    assert.match(await page.$eval('#storagePdf', e => e.textContent), /200 B.*20.0%/);
+    await page.waitForFunction(() => !document.querySelector('#storageSettingsFields').disabled);
+    await page.click('[name="save_videos"]');
+    await page.type('#storageFileLimit', '25');
+    await page.click('#saveStorageSettings');
+    await page.waitForFunction(() => document.querySelector('#storageSettingsStatus').textContent.startsWith('Storage settings saved.'));
+    assert.equal(storageSettings.save_videos, false);
+    assert.equal(storageSettings.max_file_size_mb, 25);
+    await page.click('#refreshStorage');
+    await page.waitForFunction(() => !document.querySelector('#refreshStorage').disabled);
     await page.click('#profileTab');
     assert.equal(await page.$eval('#profileTab', e => e.getAttribute('aria-selected')), 'true');
     await page.waitForFunction(() => !document.querySelector('#profileDetails').classList.contains('hidden'));

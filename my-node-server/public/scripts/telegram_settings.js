@@ -177,6 +177,7 @@
         item.tabIndex = selected ? 0 : -1;
         document.getElementById(item.getAttribute('aria-controls')).classList.toggle('hidden', !selected);
       });
+      document.dispatchEvent(new CustomEvent('settings:tab', { detail: tab.id }));
     }
     tabs.forEach(function (tab, index) {
       tab.addEventListener('click', function () { selectTab(tab); });

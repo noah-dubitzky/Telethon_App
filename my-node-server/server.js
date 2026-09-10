@@ -87,6 +87,7 @@ app.use('/api/auth/profile', profileRouter);
 app.use('/api/telegram-accounts', telegramAccountsRouter);
 app.use('/api/telegram-connect', telegramConnectRouter);
 app.use('/api/media', s3MediaRouter);
+app.use('/api/storage', require('./routes/storage'));
 app.use('/api/pdf-exports', pdfExportsRouter);
 app.use('/internal/worker', workerInternalRouter);
 app.use('/export', pdfExportRouter);

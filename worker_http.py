@@ -37,6 +37,9 @@ class BackendClient:
     async def set_status(self, account_id, status):
         return await self._request("PATCH", f"/accounts/{account_id}/status", {"status": status})
 
+    async def storage_settings(self, account_id):
+        return (await self._request("GET", f"/accounts/{account_id}/storage-settings"))["settings"]
+
     async def filter_allowed(self, payload):
         return bool((await self._request("POST", "/filters/check", payload)).get("allowed", True))
 

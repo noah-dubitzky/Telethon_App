@@ -9,6 +9,8 @@
   <script src="/scripts/session_guard.js"></script>
   <script defer src="/scripts/telegram_settings.js"></script>
   <script defer src="/scripts/profile.js"></script>
+  <script defer src="/scripts/storage.js"></script>
+  <script defer src="/scripts/storage_settings.js"></script>
   <style>
     dialog::backdrop { background: rgb(6 31 66 / .55); backdrop-filter: blur(3px); }
     [role="tab"][aria-selected="true"] { color: #2563eb; border-color: #2563eb; }
@@ -71,6 +73,7 @@
     <div role="tablist" aria-label="Account settings" class="mt-8 flex gap-6 border-b border-slate-200">
       <button id="accountsTab" role="tab" aria-selected="true" aria-controls="accountsPanel" class="border-b-2 border-transparent pb-4 text-sm font-semibold">Telegram Accounts</button>
       <button id="profileTab" role="tab" aria-selected="false" aria-controls="profilePanel" tabindex="-1" class="border-b-2 border-transparent pb-4 text-sm font-semibold text-slate-500">Profile</button>
+      <button id="storageTab" role="tab" aria-selected="false" aria-controls="storagePanel" tabindex="-1" class="border-b-2 border-transparent pb-4 text-sm font-semibold text-slate-500">Data &amp; Storage</button>
     </div>
     <div id="pageNotice" class="mt-5"><div id="settingsMessage" class="hidden rounded-xl p-4 text-sm" role="status" aria-live="polite"></div></div>
     <section id="accountsPanel" role="tabpanel" aria-labelledby="accountsTab" class="mt-6">
@@ -84,6 +87,53 @@
         <button id="retryAccounts" class="hidden m-6 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold">Retry loading accounts</button>
       </div>
       <p class="mt-4 text-sm text-slate-500">Open Manage to control archiving, filters, and the connection for an account.</p>
+    </section>
+    <section id="storagePanel" role="tabpanel" aria-labelledby="storageTab" class="hidden mt-6 space-y-6">
+      <div class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8">
+        <div class="flex items-start justify-between gap-4">
+          <div><h2 class="text-lg font-bold">Storage overview</h2><p class="mt-1 text-sm text-slate-500">Saved content across your Telegram accounts.</p></div>
+          <button id="refreshStorage" type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">Refresh</button>
+        </div>
+        <p id="storageStatus" class="mt-6 text-sm text-slate-500" role="status" aria-live="polite">Open this tab to calculate storage.</p>
+        <div id="storageResults" class="hidden mt-6">
+          <p class="text-sm font-medium text-slate-500">Total stored</p>
+          <p id="storageTotal" class="mt-1 text-4xl font-bold tracking-tight"></p>
+          <div class="mt-6 flex h-3 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+            <span id="storageTextBar" class="h-full bg-blue-500"></span><span id="storageMediaBar" class="h-full bg-violet-500"></span><span id="storagePdfBar" class="h-full bg-amber-500"></span>
+          </div>
+          <dl class="mt-5 divide-y divide-slate-100">
+            <div class="flex items-center justify-between gap-4 py-4"><dt class="flex items-center gap-3 text-sm font-medium"><span class="h-2.5 w-2.5 rounded-full bg-blue-500" aria-hidden="true"></span>Text</dt><dd id="storageText" class="text-sm text-slate-600"></dd></div>
+            <div class="flex items-center justify-between gap-4 py-4"><dt class="flex items-center gap-3 text-sm font-medium"><span class="h-2.5 w-2.5 rounded-full bg-violet-500" aria-hidden="true"></span>Media</dt><dd id="storageMedia" class="text-sm text-slate-600"></dd></div>
+            <div class="flex items-center justify-between gap-4 py-4"><dt class="flex items-center gap-3 text-sm font-medium"><span class="h-2.5 w-2.5 rounded-full bg-amber-500" aria-hidden="true"></span>PDFs</dt><dd id="storagePdf" class="text-sm text-slate-600"></dd></div>
+          </dl>
+          <p class="mt-4 text-xs leading-5 text-slate-500">Includes saved message text and captions, cloud-stored media, and PDFs. PDFs include attachments and saved exports. Older local files and database overhead are excluded.</p>
+        </div>
+      </div>
+      <form id="storageSettingsForm" class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8">
+        <h2 class="text-lg font-bold">Storage settings</h2>
+        <p class="mt-1 text-sm text-slate-500">Choose what TeleSaver automatically saves across all your linked Telegram accounts.</p>
+        <p id="storageSettingsStatus" class="mt-4 text-sm text-slate-600" role="status" aria-live="polite">Open this tab to load your preferences.</p>
+        <button id="retryStorageSettings" type="button" class="hidden mt-3 text-sm font-semibold text-blue-600">Retry loading settings</button>
+        <fieldset id="storageSettingsFields" disabled class="mt-5 disabled:opacity-50">
+          <legend class="text-sm font-semibold">What to save</legend>
+          <div class="mt-3 grid gap-4 sm:grid-cols-2">
+            <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-4"><input type="checkbox" name="save_text" class="mt-1 h-4 w-4 accent-blue-600"><span class="text-sm font-medium">Message text<span class="mt-1 block text-xs font-normal text-slate-500">Includes media captions.</span></span></label>
+            <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-4"><input type="checkbox" name="save_photos" class="mt-1 h-4 w-4 accent-blue-600"><span class="text-sm font-medium">Photos<span class="mt-1 block text-xs font-normal text-slate-500">Images and image attachments.</span></span></label>
+            <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-4"><input type="checkbox" name="save_videos" class="mt-1 h-4 w-4 accent-blue-600"><span class="text-sm font-medium">Videos</span></label>
+            <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-4"><input type="checkbox" name="save_audio" class="mt-1 h-4 w-4 accent-blue-600"><span class="text-sm font-medium">Audio<span class="mt-1 block text-xs font-normal text-slate-500">Includes voice messages.</span></span></label>
+            <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-4"><input type="checkbox" name="save_files" class="mt-1 h-4 w-4 accent-blue-600"><span class="text-sm font-medium">Other files<span class="mt-1 block text-xs font-normal text-slate-500">Documents, stickers, and other attachments, excluding PDFs.</span></span></label>
+            <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-4"><input type="checkbox" name="save_pdfs" class="mt-1 h-4 w-4 accent-blue-600"><span class="text-sm font-medium">PDF attachments<span class="mt-1 block text-xs font-normal text-slate-500">PDF files received through Telegram.</span></span></label>
+          </div>
+          <div class="mt-6 border-t border-slate-100 pt-6">
+            <label for="storageFileLimit" class="block text-sm font-semibold">Maximum file size (MB)</label>
+            <p id="storageFileLimitHelp" class="mt-1 text-sm text-slate-500">Larger attachments are skipped. Message text can still be saved. 1 MB = 1,000,000 bytes.</p>
+            <input id="storageFileLimit" name="max_file_size_mb" type="number" min="1" max="100000" step="1" placeholder="No limit" aria-describedby="storageFileLimitHelp" class="mt-3 w-full rounded-lg border border-slate-300 px-3 py-2 sm:w-52">
+            <p class="mt-2 text-xs text-slate-500">Leave blank for no limit.</p>
+          </div>
+          <p class="mt-6 text-sm text-slate-500">Changes apply to future automatic saves. Existing content and manually created PDF exports are unaffected. Turning off every type stops new content from being saved.</p>
+          <button id="saveStorageSettings" type="submit" class="mt-5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">Save settings</button>
+        </fieldset>
+      </form>
     </section>
     <section id="profilePanel" role="tabpanel" aria-labelledby="profileTab" class="hidden mt-6 space-y-6">
       <div class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
@@ -107,7 +157,7 @@
         <p id="profileTimezone" class="hidden mt-3 text-xs text-slate-500">Dates and times are shown in your browser's local timezone.</p>
         <div id="pendingEmail" class="hidden mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4"><p class="text-sm font-semibold">Verify your new email</p><p id="pendingEmailText" class="mt-1 break-all text-sm text-slate-600"></p><div class="mt-3 flex flex-wrap gap-4"><button id="verifyEmailButton" class="text-sm font-semibold text-blue-700">Enter verification code</button><button id="cancelEmailButton" class="text-sm font-semibold text-slate-600">Cancel email change</button></div></div>
       </div>
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"><h2 class="text-lg font-bold">Sign-in &amp; security</h2><div class="mt-5 flex flex-wrap items-center justify-between gap-4"><div><h3 class="text-sm font-semibold">Sign out of this browser</h3><p class="mt-1 text-sm text-slate-500">Your connected Telegram accounts and saved archives stay in your workspace.</p></div><button data-logout class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">Log out</button></div></div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"><h2 class="text-lg font-bold">Log Out</h2><div class="mt-5 flex flex-wrap items-center justify-between gap-4"><div><h3 class="text-sm font-semibold">Sign out of this browser</h3><p class="mt-1 text-sm text-slate-500">Your connected Telegram accounts and saved archives stay in your workspace.</p></div><button data-logout class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">Log out</button></div></div>
     </section>
   </main>
 </div>

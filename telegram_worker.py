@@ -100,8 +100,28 @@ class S3MediaStorage:
             filename = f"{chat_id}_{message_id}{extension}"
         return f"users/{int(user_id)}/telegram_accounts/{int(account_id)}/{category}/{filename}"
 
-    async def archive(self, user_id, account_id, event):
+    async def archive(self, user_id, account_id, event, settings=None):
         category, mime_type, original, extension = self.describe(event)
+        settings = settings or {}
+        is_pdf = (mime_type or '').split(';')[0].strip() == 'application/pdf' or extension == '.pdf'
+        flag = 'save_pdfs' if is_pdf else {
+            'images': 'save_photos', 'videos': 'save_videos', 'audio': 'save_audio',
+            'voice': 'save_audio', 'stickers': 'save_files', 'documents': 'save_files',
+            'other': 'save_files'}[category]
+        if not settings.get(flag, True):
+            return None
+        limit_mb = settings.get('max_file_size_mb')
+        limit = limit_mb * 1000000 if limit_mb is not None else None
+        size = getattr(getattr(event, 'file', None), 'size', None)
+        if size is None:
+            size = getattr(self._document(event), 'size', None)
+        if limit is not None and isinstance(size, (int, float)) and size > limit:
+            return None
+
+        def check_size(current, total):
+            if limit is not None and (current > limit or (total and total > limit)):
+                raise ValueError('Media exceeds configured file size limit')
+
         key = self.object_key(user_id, account_id, event, category, original, extension)
         temp_path = None
         uploaded = False
@@ -110,9 +130,14 @@ class S3MediaStorage:
             with tempfile.NamedTemporaryFile(prefix="telesaver_", suffix=suffix, delete=False) as temp:
                 temp_path = Path(temp.name)
             try:
-                downloaded = await event.download_media(file=str(temp_path))
+                download_args = {'file': str(temp_path)}
+                if limit is not None:
+                    download_args['progress_callback'] = check_size
+                downloaded = await event.download_media(**download_args)
                 if not downloaded or not temp_path.is_file():
                     raise RuntimeError("Telegram returned no downloaded media file")
+                if limit is not None and temp_path.stat().st_size > limit:
+                    return None
             except Exception as error:
                 log.error("telegram download failed user=%s account=%s message=%s media_type=%s type=%s",
                           user_id, account_id, event.message.id, category, type(error).__name__)
@@ -234,7 +259,19 @@ class ActiveClientManager:
         active = self.clients.get(account_id)
         if not active:
             raise RuntimeError(f"No trusted active account context for account {account_id}")
-        media = await self._download_media(active.user_id, account_id, event)
+        # Read current preferences for each event. Failure must not silently
+        # enable saving content that the user disabled.
+        settings = await self.backend.storage_settings(account_id)
+        if not isinstance(settings, dict) or any(type(settings.get(flag)) is not bool for flag in
+                ('save_text', 'save_photos', 'save_videos', 'save_audio', 'save_files', 'save_pdfs')):
+            raise RuntimeError('Invalid storage settings')
+        limit = settings.get('max_file_size_mb')
+        if limit is not None and (type(limit) is not int or not 1 <= limit <= 100000):
+            raise RuntimeError('Invalid storage file limit')
+        media = await self._download_media(active.user_id, account_id, event, settings)
+        text = ((event.raw_text or '').strip() or None) if settings['save_text'] else None
+        if not text and not media:
+            return
         payload = {
             "telegram_account_id": account_id,
             "telegram_message_id": event.message.id if event.message else None,
@@ -246,7 +283,7 @@ class ActiveClientManager:
             "channel_id": channel_id,
             "is_channel_post": bool(event.is_channel and not event.is_group),
             "is_outgoing": bool(event.out),
-            "text": (event.raw_text or "").strip() or " ",
+            "text": text,
             "media": {k: v for k, v in media.items() if not k.startswith("_")} if media else None,
             "timestamp": event.date.astimezone(self.timezone).strftime("%Y-%m-%d %H:%M:%S"),
         }
@@ -262,10 +299,10 @@ class ActiveClientManager:
             self.media_storage.cleanup(media)
         log.info("account=%s message=%s archived", account_id, payload["telegram_message_id"])
 
-    async def _download_media(self, user_id, account_id, event):
+    async def _download_media(self, user_id, account_id, event, settings=None):
         if not event.media:
             return None
-        return await self.media_storage.archive(user_id, account_id, event)
+        return await self.media_storage.archive(user_id, account_id, event, settings)
 
 
 async def run():

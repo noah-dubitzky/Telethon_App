@@ -62,4 +62,12 @@ router.post('/filters/check', async (req, res) => {
   res.json({ allowed });
 });
 
+router.get('/accounts/:id/storage-settings', async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT user_id FROM telegram_accounts WHERE id = ?', [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ error: 'Account not found' });
+    res.json({ settings: await require('../services/storageSettings').get(rows[0].user_id) });
+  } catch (_) { res.status(503).json({ error: 'Unable to load storage settings.' }); }
+});
+
 module.exports = router;

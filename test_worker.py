@@ -20,6 +20,28 @@ class ManagerTests(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         self.env.stop()
 
+    async def test_text_disabled_preserves_media_without_caption_and_skips_empty_messages(self):
+        self.manager.clients[27] = SimpleNamespace(user_id=14)
+        self.backend.storage_settings.return_value = dict(save_text=False, save_photos=True,
+            save_videos=True, save_audio=True, save_files=True, save_pdfs=True, max_file_size_mb=None)
+        self.manager._download_media = AsyncMock(return_value={'s3_key': 'test', '_temp_path': 'temp'})
+        event = SimpleNamespace(get_sender=AsyncMock(return_value=None), get_chat=AsyncMock(return_value=None),
+            chat_id=1, message=SimpleNamespace(id=2), raw_text='private caption',
+            is_channel=False, is_group=False, out=False, date=MagicMock())
+        await self.manager._process_event(27, event)
+        payload = self.backend.ingest.call_args.args[0]
+        self.assertIsNone(payload['text'])
+        self.assertEqual(payload['media'], {'s3_key': 'test'})
+        self.manager._download_media.return_value = None
+        self.backend.ingest.reset_mock()
+        await self.manager._process_event(27, event)
+        self.backend.ingest.assert_not_called()
+        self.backend.storage_settings.side_effect = RuntimeError('backend unavailable')
+        self.manager._download_media.reset_mock()
+        with self.assertRaises(RuntimeError):
+            await self.manager._process_event(27, event)
+        self.manager._download_media.assert_not_called()
+
     @patch('telegram_worker.StringSession', return_value=MagicMock())
     @patch('telegram_worker.TelegramClient')
     async def test_start_is_idempotent_and_account_bound(self, client_type, _session_type):
@@ -103,6 +125,65 @@ class MediaStorageTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(first['s3_key'], second['s3_key'])
         Path(first['_temp_path']).unlink()
         Path(second['_temp_path']).unlink()
+
+    async def test_disabled_categories_never_download(self):
+        for mime, filename, flag, flags in [
+            ('image/jpeg', 'a.jpg', 'save_photos', {}),
+            ('video/mp4', 'a.mp4', 'save_videos', {}),
+            ('audio/ogg', 'a.ogg', 'save_audio', {'voice': True}),
+            ('image/webp', 'a.webp', 'save_files', {'sticker': True}),
+            ('application/pdf', 'a', 'save_pdfs', {}),
+            ('application/octet-stream', 'a.PDF', 'save_pdfs', {}),
+        ]:
+            event = self.event(1, 1, mime, filename, **flags)
+            event.download_media = AsyncMock()
+            self.assertIsNone(await self.storage.archive(1, 1, event, {flag: False}))
+            event.download_media.assert_not_called()
+        self.s3.upload_file.assert_not_called()
+
+    async def test_pdf_is_independent_of_other_files(self):
+        event = self.event(1, 1, 'application/pdf', 'a.pdf')
+        media = await self.storage.archive(1, 1, event, {'save_files': False, 'save_pdfs': True})
+        self.assertIsNotNone(media)
+        self.storage.cleanup(media)
+
+    async def test_size_limit_before_download_and_after_download(self):
+        event = self.event(1, 1, 'video/mp4', 'a.mp4')
+        event.file.size = 1000001
+        event.download_media = AsyncMock()
+        self.assertIsNone(await self.storage.archive(1, 1, event, {'max_file_size_mb': 1}))
+        event.download_media.assert_not_called()
+        observed = []
+        async def download(file, progress_callback):
+            observed.append(file)
+            Path(file).write_bytes(b'x' * 1000001)
+            return file
+        event.file.size = None
+        event.download_media = download
+        self.assertIsNone(await self.storage.archive(1, 1, event, {'max_file_size_mb': 1}))
+        self.assertFalse(Path(observed[0]).exists())
+        self.s3.upload_file.assert_not_called()
+
+    async def test_exact_size_limit_and_progress_cancellation(self):
+        event = self.event(1, 1, 'video/mp4', 'a.mp4')
+        observed = []
+        async def download(file, progress_callback):
+            observed.append(file)
+            Path(file).write_bytes(b'x' * 1000000)
+            progress_callback(1000000, 1000000)
+            return file
+        event.download_media = download
+        media = await self.storage.archive(1, 1, event, {'max_file_size_mb': 1})
+        self.assertEqual(media['file_size'], 1000000)
+        self.storage.cleanup(media)
+        self.s3.upload_file.reset_mock()
+        async def oversized(file, progress_callback):
+            observed.append(file)
+            progress_callback(1000001, None)
+        event.download_media = oversized
+        self.assertIsNone(await self.storage.archive(1, 1, event, {'max_file_size_mb': 1}))
+        self.assertFalse(Path(observed[-1]).exists())
+        self.s3.upload_file.assert_not_called()
 
     async def test_failed_s3_upload_is_handled_and_temp_file_is_cleaned(self):
         observed = []
