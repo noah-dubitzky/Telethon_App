@@ -12,6 +12,7 @@ const assert = require('node:assert/strict');
     let pendingEmail = null;
     let passwordRequests = 0;
     let storageSettings = { save_text: true, save_photos: true, save_videos: true, save_audio: true, save_files: true, save_pdfs: true, max_file_size_mb: null };
+    let retention = { text_retention_days: null, media_retention_days: null, pdf_retention_days: null };
     page.on('pageerror', error => errors.push(error.message));
     await page.setRequestInterception(true);
     page.on('request', request => {
@@ -20,6 +21,11 @@ const assert = require('node:assert/strict');
       if (url.hostname === 'cdn.tailwindcss.com') return request.respond({ contentType: 'application/javascript', body: '' });
       if (url.hostname === 'code.jquery.com') return request.respond({ contentType: 'application/javascript', body: fs.readFileSync(path.join(__dirname, '../public/scripts/jquery-3.0.0.min.js')) });
       if (url.pathname === '/api/auth/me') return json({ user });
+      if (url.pathname === '/api/retention/preview') return json({ confirmation_required: true, token: 'preview-token', counts: { text: 12, media: 3, pdfs: 2 } });
+      if (url.pathname === '/api/retention') {
+        if (request.method() === 'PUT') retention = JSON.parse(request.postData()).settings;
+        return json({ settings: retention });
+      }
       if (url.pathname === '/api/storage/settings') {
         if (request.method() === 'PUT') storageSettings = JSON.parse(request.postData());
         return json({ settings: storageSettings });
@@ -70,6 +76,20 @@ const assert = require('node:assert/strict');
     await page.waitForFunction(() => document.querySelector('#storageSettingsStatus').textContent.startsWith('Storage settings saved.'));
     assert.equal(storageSettings.save_videos, false);
     assert.equal(storageSettings.max_file_size_mb, 25);
+    await page.waitForFunction(() => !document.querySelector('#retentionFields').disabled);
+    await page.select('#textRetention', '30');
+    await page.click('#retentionForm button[type="submit"]');
+    await page.waitForFunction(() => document.querySelector('#retentionDialog').open);
+    assert.equal(await page.$eval('#retentionTextCount', e => e.textContent), '12');
+    assert.equal(await page.$eval('#retentionMediaCount', e => e.textContent), '3');
+    assert.equal(await page.$eval('#retentionPdfCount', e => e.textContent), '2');
+    await page.click('#cancelRetention');
+    assert.equal(retention.text_retention_days, null);
+    await page.click('#retentionForm button[type="submit"]');
+    await page.waitForFunction(() => document.querySelector('#retentionDialog').open);
+    await page.click('#confirmRetention');
+    await page.waitForFunction(() => document.querySelector('#retentionStatus').textContent === 'Retention settings saved.');
+    assert.equal(retention.text_retention_days, 30);
     await page.click('#refreshStorage');
     await page.waitForFunction(() => !document.querySelector('#refreshStorage').disabled);
     await page.click('#profileTab');

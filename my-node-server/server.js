@@ -88,6 +88,7 @@ app.use('/api/telegram-accounts', telegramAccountsRouter);
 app.use('/api/telegram-connect', telegramConnectRouter);
 app.use('/api/media', s3MediaRouter);
 app.use('/api/storage', require('./routes/storage'));
+app.use('/api/retention', require('./routes/retention'));
 app.use('/api/pdf-exports', pdfExportsRouter);
 app.use('/internal/worker', workerInternalRouter);
 app.use('/export', pdfExportRouter);
@@ -108,4 +109,5 @@ const HOST = process.env.HOST || '0.0.0.0';
 
 server.listen(PORT, HOST, () => {
   console.log(`Server running on http://${HOST}:${PORT}`);
+  require('./services/retention').start();
 });
