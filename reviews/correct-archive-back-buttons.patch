@@ -1,0 +1,135 @@
+--- a/my-node-server/public/desktop/sender.html
++++ b/my-node-server/public/desktop/sender.html
+@@ -57,6 +57,7 @@
+           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 4v12"/></svg>
+           Download
+         </button>
++        <a id="account-back-link" href="/desktop/index.html" class="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow transition border border-blue-600">← Back to account</a>
+       </div>
+     </div>
+ 
+@@ -97,6 +98,7 @@
+         return;
+       }
+ 
++      $("#account-back-link").attr("href", `/desktop/index.html?telegram_account_id=${encodeURIComponent(accountId)}`);
+ 
+       $("#sender-id").text(external_id);
+       $("#sender-phone").text(senderPhone || "—");
+--- a/my-node-server/public/desktop/channels.html
++++ b/my-node-server/public/desktop/channels.html
+@@ -49,6 +49,7 @@
+           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 4v12"/></svg>
+           Download
+         </button>
++        <a id="account-back-link" href="/desktop/index.html" class="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow transition border border-blue-600">← Back to account</a>
+       </div>
+     </div>
+ 
+@@ -81,6 +82,7 @@
+         return;
+       }
+ 
++      $("#account-back-link").attr("href", `/desktop/index.html?telegram_account_id=${encodeURIComponent(accountId)}`);
+ 
+       $("#channel-name").text(channelName || "—");
+ 
+--- a/my-node-server/public/mobile/sender.html
++++ b/my-node-server/public/mobile/sender.html
+@@ -65,7 +65,8 @@
+       justify-content: center;
+     }
+ 
+-    .button {
++    .button,
++    .back-link {
+       display: inline-flex;
+       align-items: center;
+       justify-content: center;
+@@ -87,6 +88,15 @@
+       cursor: pointer;
+     }
+ 
++    .back-link {
++      color: #fff;
++      background: rgba(29, 78, 216, 0.18);
++      border: 1px solid #fff;
++    }
++    .back-link:active, .back-link:focus {
++      background: #fff;
++      color: var(--accent);
++    }
+ 
+     .meta-card {
+       background: var(--card);
+@@ -223,6 +233,7 @@
+         <button id="download" class="button" title="Download conversation">
+           ⬇️ Download
+         </button>
++        <a id="account-back-link" href="/mobile/index.html" class="back-link">← Back to account</a>
+       </div>
+     </div>
+   </div>
+@@ -268,6 +279,7 @@
+         return;
+       }
+ 
++      $("#account-back-link").attr("href", `/mobile/index.html?telegram_account_id=${encodeURIComponent(accountId)}`);
+ 
+       $("#sender-id").text(external_id);
+       $("#sender-phone").text(senderPhone || "—");
+--- a/my-node-server/public/mobile/channels.html
++++ b/my-node-server/public/mobile/channels.html
+@@ -74,7 +74,8 @@
+       justify-content: center;
+     }
+ 
+-    .button {
++    .button,
++    .back-link {
+       display: inline-flex;
+       align-items: center;
+       justify-content: center;
+@@ -94,6 +95,15 @@
+       box-shadow: 0 2px 8px rgba(29,78,216,0.08);
+     }
+ 
++    .back-link {
++      color: #fff;
++      background: rgba(29, 78, 216, 0.18);
++      border: 1px solid #fff;
++    }
++    .back-link:active, .back-link:focus {
++      background: #fff;
++      color: var(--accent);
++    }
+ 
+     .meta-card {
+       background: var(--card);
+@@ -239,6 +249,7 @@
+         <button id="download-conversation" class="button" title="Download conversation">
+           ⬇️ Download
+         </button>
++        <a id="account-back-link" href="/mobile/index.html" class="back-link">← Back to account</a>
+       </div>
+     </div>
+   </div>
+@@ -277,6 +288,7 @@
+         return;
+       }
+ 
++      $("#account-back-link").attr("href", `/mobile/index.html?telegram_account_id=${encodeURIComponent(accountId)}`);
+ 
+       $("#channel-name").text(channelName || "—");
+ 
+--- a/my-node-server/test/frontendStep7.test.js
++++ b/my-node-server/test/frontendStep7.test.js
+@@ -204,7 +204,7 @@
+   assert.match(route, /m\.is_outgoing/);
+   assert.match(html, /bg-\[#dfe7ed\]/);
+   assert.match(html, /id="download-messages"/);
+-  assert.doesNotMatch(html, /id="account-back-link"/);
++  assert.match(html, /id="account-back-link"/);
+   assert.match(html, /id="messages"/);
+   assert.match(helpers, /const outgoing = msg\.is_outgoing/);
+   assert.match(helpers, /justify-end/);

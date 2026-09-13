@@ -234,10 +234,17 @@
       destination.searchParams.set('external_id', entity.external_sender_id || '');
       destination.searchParams.set('phone', entity.phone || '');
     }
-    return $('<a class="flex items-center justify-between gap-3 rounded-xl border border-transparent p-4 hover:border-blue-200 hover:bg-blue-50 transition">')
-      .attr('href', destination.pathname + destination.search)
-      .append($('<span class="font-semibold text-slate-800">').text(entity.name || 'Unknown'))
-      .append($('<span class="text-lg text-slate-400" aria-hidden="true">').text('›'));
+    const name = entity.name || 'Unknown';
+    const monogram = name.trim().split(/\s+/).slice(0, 2).map(word => word[0] || '').join('').toUpperCase() || '?';
+    const link = $('<a class="flex items-center gap-3.5 rounded-[10px] border border-transparent p-[15px] transition-colors duration-150 hover:border-[#c1d5fb] hover:bg-[#eef4ff] motion-reduce:transition-none focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-[#448aff] focus-visible:outline-offset-[3px]">').attr('href', destination.pathname + destination.search);
+    link.append($('<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold text-white shadow-[inset_0_1px_0_#ffffff40]" aria-hidden="true">')
+      .addClass(isChannel ? 'bg-[linear-gradient(145deg,#405779,#142a49)]' : 'bg-[linear-gradient(145deg,#347cff,#1842a0)]').text(isChannel ? '#' : monogram));
+    const identity = $('<span class="min-w-0 flex-1">');
+    identity.append($('<span class="block font-bold text-[#14243e] [overflow-wrap:anywhere]">').text(name));
+    identity.append($('<span class="mt-[3px] block text-xs text-slate-500">').text(isChannel ? 'Channel archive' : 'Direct conversation'));
+    link.append(identity);
+    link.append($('<span class="text-[22px] text-[#2463eb]" aria-hidden="true">').text('\u2192'));
+    return link;
   }
 
   function renderEntities(rows) {
@@ -245,6 +252,8 @@
     const channels = $('#channelList').empty();
     const senderRows = rows.filter(row => row.entity_type === 'sender');
     const channelRows = rows.filter(row => row.entity_type === 'channel');
+    $('#archiveSenderCount').text(senderRows.length);
+    $('#archiveChannelCount').text(channelRows.length);
     senderRows.forEach(row => senders.append(entityLink(row)));
     channelRows.forEach(row => channels.append(entityLink(row)));
     $('#senderEmpty').toggleClass('hidden', senderRows.length !== 0);

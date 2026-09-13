@@ -1,0 +1,855 @@
+--- /dev/null
++++ b/my-node-server/public/scripts/sidebar.js
+@@ -0,0 +1,124 @@
++(function ($) {
++  'use strict';
++
++  $(function () {
++    const host = $('#appSidebar');
++    if (!host.length || host.children().length) return;
++    const path = window.location.pathname;
++    const mobilePage = path.startsWith('/mobile/');
++    const dashboard = mobilePage ? '/mobile/index.html' : '/desktop/index.html';
++    const accountId = new URLSearchParams(window.location.search).get('telegram_account_id');
++    const items = [
++      ['Dashboard', dashboard, 'grid'],
++      ['All Messages', '/desktop/all-messages.html', 'message'],
++      ['People', '/desktop/people.html', 'people'],
++      ['Channels', '/desktop/archive-channels.html', 'channel'],
++      ['Media & Files', '/desktop/media-library.html', 'media'],
++      ['Accounts & Settings', '/settings.html', 'settings']
++    ];
++    if (accountId && /^\d+$/.test(accountId)) {
++      items.push(['Archive Filters', `${mobilePage ? '/mobile' : '/desktop'}/filters.html?telegram_account_id=${encodeURIComponent(accountId)}`, 'filter']);
++    }
++    const icons = {
++      grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
++      message: '<path d="M4 5h16v12H7l-3 3V5Z M8 9h8M8 13h5"/>',
++      people: '<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M14 15.5a4 4 0 0 1 6.5 3.1"/>',
++      channel: '<path d="m4 13 14-7-4 14-3-5-7-2Z m7 2 3-3"/>',
++      media: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m5 17 4-4 3 3 2-2 5 3"/>',
++      settings: '<circle cx="12" cy="12" r="3"/><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/>',
++      filter: '<path d="M3 4h18l-7 8v7l-4 2v-9Z"/>'
++    };
++    host.html(`
++      <div id="sidebarBackdrop" class="fixed inset-0 z-40 hidden bg-black/40 lg:hidden"></div>
++      <aside id="navigationSidebar" aria-label="Main navigation" class="fixed inset-y-0 left-0 z-50 hidden w-64 max-w-[85vw] flex-col overflow-y-auto overscroll-contain bg-[#061f42] text-left text-white shadow-xl lg:flex">
++        <div class="flex shrink-0 items-center justify-between px-6 py-6">
++          <a id="sidebarHome" class="flex items-center gap-3 text-white" aria-label="TeleSaver dashboard"><img src="/assets/telesaver.png" alt="" class="h-11 w-11 rounded-xl" /><span class="text-xl font-bold">TeleSaver</span></a>
++          <button id="closeNavigation" type="button" class="rounded-lg p-2 text-white hover:bg-white/10 lg:hidden" aria-label="Close navigation">&#10005;</button>
++        </div>
++        <nav id="sidebarLinks" class="space-y-2 px-4 pb-5" aria-label="Dashboard navigation"></nav>
++        <div class="mt-auto shrink-0 border-t border-white/10 p-4">
++          <div class="rounded-xl bg-white/5 p-4">
++            <p class="text-xs font-medium text-slate-400">Signed in as</p>
++            <p data-user-email class="mt-1 truncate text-sm font-semibold">Loading...</p>
++            <button data-logout type="button" class="mt-4 text-xs font-semibold text-blue-300 hover:text-white">Log out</button>
++          </div>
++        </div>
++      </aside>`);
++    $('#sidebarHome').attr('href', dashboard);
++    let activePath = path;
++    if (path.endsWith('/sender.html')) activePath = '/desktop/people.html';
++    if (path.endsWith('/channels.html')) activePath = '/desktop/archive-channels.html';
++    if (path === '/manage-account.html') activePath = '/settings.html';
++    items.forEach(function ([label, href, icon]) {
++      const destination = new URL(href, window.location.origin);
++      const active = destination.pathname === activePath;
++      const link = $('<a class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300">')
++        .attr('href', href)
++        .addClass(active ? 'bg-blue-500/20 font-semibold text-white ring-1 ring-inset ring-blue-300/10' : 'text-slate-300 hover:bg-white/5 hover:text-white');
++      if (active) link.attr('aria-current', destination.pathname === path ? 'page' : 'location');
++      link.append($(`<svg aria-hidden="true" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icons[icon]}</svg>`));
++      link.append($('<span>').text(label));
++      $('#sidebarLinks').append(link);
++    });
++
++    function showUser(user) {
++      if (user) host.find('[data-user-email]').text(user.email);
++    }
++    showUser(window.telesaverUser);
++    document.addEventListener('telesaver:authenticated', function (event) { showUser(event.detail); });
++
++    let trigger = $('#openSidebar');
++    if (!trigger.length) {
++      const toolbar = $('<div class="flex w-full shrink-0 items-center border-b border-slate-200 bg-white px-4 py-2 lg:hidden">');
++      trigger = $('<button id="openSidebar" type="button" class="rounded-lg bg-[#061f42] px-4 py-2 text-sm font-semibold text-white">').text('Menu');
++      toolbar.append(trigger);
++      host.after(toolbar);
++    }
++    trigger.attr({ 'aria-label': 'Open navigation', 'aria-controls': 'navigationSidebar', 'aria-expanded': 'false' }).addClass('lg:hidden');
++    const sidebar = $('#navigationSidebar');
++    const desktop = window.matchMedia('(min-width: 1024px)');
++    let opened = false;
++    let previousFocus;
++    let hadOverflowHidden = false;
++    let background = $();
++
++    function close() {
++      if (!opened) return;
++      opened = false;
++      sidebar.addClass('hidden').removeClass('flex').removeAttr('role aria-modal');
++      $('#sidebarBackdrop').addClass('hidden');
++      trigger.attr('aria-expanded', 'false');
++      background.removeAttr('inert');
++      $('body').toggleClass('overflow-hidden', hadOverflowHidden);
++      if (!desktop.matches && previousFocus) previousFocus.focus();
++    }
++    trigger.on('click', function () {
++      if (desktop.matches) return;
++      opened = true;
++      previousFocus = document.activeElement;
++      hadOverflowHidden = $('body').hasClass('overflow-hidden');
++      background = $('body').children().not(host).not('script, style, [inert]');
++      background.attr('inert', '');
++      $('body').addClass('overflow-hidden');
++      sidebar.removeClass('hidden').addClass('flex').attr({ role: 'dialog', 'aria-modal': 'true' });
++      $('#sidebarBackdrop').removeClass('hidden');
++      trigger.attr('aria-expanded', 'true');
++      $('#closeNavigation').trigger('focus');
++    });
++    $('#closeNavigation, #sidebarBackdrop').on('click', close);
++    desktop.addEventListener('change', close);
++    $(document).on('keydown.sidebar', function (event) {
++      if (!opened) return;
++      if (event.key === 'Escape') close();
++      if (event.key !== 'Tab') return;
++      const controls = sidebar.find('a[href], button:not(:disabled)').filter(':visible');
++      const first = controls[0];
++      const last = controls[controls.length - 1];
++      if (event.shiftKey && document.activeElement === first) {
++        event.preventDefault(); last.focus();
++      } else if (!event.shiftKey && document.activeElement === last) {
++        event.preventDefault(); first.focus();
++      }
++    });
++  });
++})(jQuery);
+--- /dev/null
++++ b/my-node-server/test/sidebar.browser.test.cjs
+@@ -0,0 +1,69 @@
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const puppeteer = require('puppeteer');
++
++// Exercise the real page markup and shared sidebar with synthetic session data.
++// Other page controllers and external requests are isolated from this UI test.
++(async () => {
++  const browser = await puppeteer.launch({ headless: true });
++  try {
++    const page = await browser.newPage();
++    const root = path.resolve(__dirname, '../public');
++    const jquery = fs.readFileSync(path.join(root, 'scripts/jquery-3.0.0.min.js'), 'utf8');
++    await page.setRequestInterception(true);
++    page.on('request', async request => {
++      const url = new URL(request.url());
++      if (url.hostname === 'cdn.tailwindcss.com') return request.continue();
++      if (request.resourceType() === 'document') {
++        return request.respond({ contentType: 'text/html', body: fs.readFileSync(path.join(root, url.pathname), 'utf8') });
++      }
++      if (url.pathname.includes('jquery')) return request.respond({ contentType: 'application/javascript', body: jquery });
++      if (url.pathname === '/scripts/sidebar.js') {
++        return request.respond({ contentType: 'application/javascript', body: fs.readFileSync(path.join(root, 'scripts/sidebar.js'), 'utf8') });
++      }
++      if (url.pathname.endsWith('/session_guard.js')) {
++        return request.respond({ contentType: 'application/javascript', body: "window.telesaverUser = {email: 'sidebar-test@example.test'};" });
++      }
++      return request.respond({ contentType: 'application/javascript', body: '' });
++    });
++    const pages = fs.readdirSync(root, { recursive: true }).filter(file => file.endsWith('.html') && fs.readFileSync(path.join(root, file), 'utf8').includes('session_guard.js'));
++    for (const file of pages) {
++      await page.setViewport({ width: 1280, height: 720 });
++      await page.goto(`http://sidebar.test/${file.replaceAll('\\', '/')}?telegram_account_id=42`);
++      await page.waitForSelector('#navigationSidebar');
++      await page.waitForFunction(() => getComputedStyle(document.querySelector('#navigationSidebar')).position === 'fixed');
++      assert.equal(await page.$$eval('#navigationSidebar', nodes => nodes.length), 1, file);
++      assert.equal(await page.$eval('#navigationSidebar [data-user-email]', el => el.textContent), 'sidebar-test@example.test', file);
++      assert.equal(await page.$eval('body', el => getComputedStyle(el).paddingLeft), '256px', file);
++      assert.equal(await page.$$eval('#sidebarLinks [aria-current]', nodes => nodes.length), 1, file);
++      assert.ok(await page.$eval('#sidebarLinks a:last-child', el => el.href.includes('telegram_account_id=42')), file);
++      await page.setViewport({ width: 390, height: 700 });
++      await page.click('#openSidebar');
++      assert.equal(await page.$eval('#navigationSidebar', el => el.getAttribute('aria-modal')), 'true', file);
++      await page.$eval('#navigationSidebar [data-logout]', el => el.focus());
++      await page.keyboard.press('Tab');
++      assert.equal(await page.evaluate(() => document.activeElement.id), 'sidebarHome', file);
++      await page.keyboard.down('Shift');
++      await page.keyboard.press('Tab');
++      await page.keyboard.up('Shift');
++      assert.equal(await page.evaluate(() => document.activeElement.hasAttribute('data-logout')), true, file);
++      await page.keyboard.press('Escape');
++      assert.equal(await page.$eval('#openSidebar', el => el.getAttribute('aria-expanded')), 'false', file);
++      assert.equal(await page.evaluate(() => document.activeElement.id), 'openSidebar', file);
++      await page.click('#openSidebar');
++      await page.click('#sidebarBackdrop', { offset: { x: 380, y: 300 } });
++      assert.equal(await page.$eval('#openSidebar', el => el.getAttribute('aria-expanded')), 'false', file);
++      await page.click('#openSidebar');
++      await page.setViewport({ width: 1280, height: 400 });
++      await page.waitForFunction(() => !document.querySelector('#navigationSidebar').hasAttribute('aria-modal'));
++      assert.equal(await page.$$eval('[inert]', nodes => nodes.length), 0, file);
++      assert.equal(await page.$eval('#navigationSidebar', el => getComputedStyle(el).overflowY), 'auto', file);
++      await page.evaluate(() => document.dispatchEvent(new CustomEvent('telesaver:authenticated', { detail: { email: 'later@example.test' } })));
++      assert.equal(await page.$eval('#navigationSidebar [data-user-email]', el => el.textContent), 'later@example.test', file);
++      console.log(`PASS ${file}`);
++    }
++  } finally {
++    await browser.close();
++  }
++})().catch(error => { console.error(error); process.exitCode = 1; });
+--- a/my-node-server/public/desktop/all-messages.html
++++ b/my-node-server/public/desktop/all-messages.html
+@@ -8,33 +8,13 @@
+   <script src="https://cdn.tailwindcss.com"></script>
+   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <script src="../scripts/session_guard.js"></script>
+-  <script defer src="scripts/desktop_sidebar.js"></script>
+   <script defer src="../scripts/all_messages.js"></script>
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body class="min-h-screen bg-slate-50 text-slate-950 antialiased">
+-  <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#061f42] text-white lg:flex">
+-    <a href="/desktop/index.html" class="flex items-center gap-3 px-7 py-7" aria-label="TeleSaver dashboard">
+-      <img src="/assets/telesaver.png" alt="" class="h-11 w-11 rounded-xl object-cover ring-1 ring-white/15" />
+-      <span class="text-xl font-bold tracking-tight">TeleSaver</span>
+-    </a>
+-    <nav class="mt-3 space-y-2 px-4" aria-label="Dashboard navigation">
+-      <a href="/desktop/index.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+-        Dashboard
+-      </a>
+-      <a href="/desktop/all-messages.html" aria-current="page" class="flex items-center gap-3 rounded-xl bg-blue-500/20 px-4 py-3 text-sm font-semibold text-white ring-1 ring-inset ring-blue-300/10">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v12H7l-3 3V5Z"/><path stroke-linecap="round" d="M8 9h8M8 13h5"/></svg>
+-        All Messages
+-      </a>
+-      <a href="/desktop/people.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"><svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path stroke-linecap="round" d="M3.5 19a5.5 5.5 0 0 1 11 0M14 15.5a4 4 0 0 1 6.5 3.1"/></svg><span>People</span></a>
+-      <a href="/desktop/archive-channels.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"><svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m4 13 14-7-4 14-3-5-7-2Z"/><path stroke-linecap="round" d="m11 15 3-3"/></svg><span>Channels</span></a>
+-      <a href="/desktop/media-library.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"><svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m5 17 4-4 3 3 2-2 5 3"/></svg><span>Media &amp; Files</span></a>
+-      <a href="/settings.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"><svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M18.5 5.5l-1.4 1.4M6.9 17.1l-1.4 1.4"/></svg><span>Accounts &amp; Settings</span></a>
+-    </nav>
+-    <div class="mt-auto border-t border-white/10 p-4"><div class="rounded-xl bg-white/5 p-4 ring-1 ring-inset ring-white/10"><p class="text-xs font-medium text-slate-400">Signed in as</p><p data-user-email class="mt-1 truncate text-sm font-semibold">Loading…</p><button data-logout type="button" class="mt-4 text-xs font-semibold text-blue-300 transition hover:text-white">Log out</button></div></div>
+-  </aside>
++<body class="lg:!pl-64 min-h-screen bg-slate-50 text-slate-950 antialiased">
++  <div id="appSidebar" class="contents"></div>
+ 
+-  <div class="min-h-screen lg:pl-64">
++  <div class="min-h-screen ">
+     <header class="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-slate-200 bg-white/95 px-5 backdrop-blur sm:px-8 lg:px-10">
+       <a href="/desktop/index.html" class="flex items-center gap-2 lg:hidden" aria-label="TeleSaver dashboard">
+         <img src="/assets/telesaver.png" alt="" class="h-9 w-9 rounded-lg" />
+--- a/my-node-server/public/desktop/archive-channels.html
++++ b/my-node-server/public/desktop/archive-channels.html
+@@ -8,24 +8,13 @@
+   <script src="https://cdn.tailwindcss.com"></script>
+   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <script src="../scripts/session_guard.js"></script>
+-  <script defer src="scripts/desktop_sidebar.js"></script>
+   <script defer src="../scripts/archive_channels.js"></script>
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body class="min-h-screen bg-slate-50 text-slate-950 antialiased">
+-  <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#061f42] text-white lg:flex">
+-    <a href="/desktop/index.html" class="flex items-center gap-3 px-7 py-7" aria-label="TeleSaver dashboard"><img src="/assets/telesaver.png" alt="" class="h-11 w-11 rounded-xl object-cover ring-1 ring-white/15" /><span class="text-xl font-bold tracking-tight">TeleSaver</span></a>
+-    <nav class="mt-3 space-y-2 px-4" aria-label="Dashboard navigation">
+-      <a href="/desktop/index.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"><svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+-      <a href="/desktop/all-messages.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"><svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v12H7l-3 3V5Z"/><path stroke-linecap="round" d="M8 9h8M8 13h5"/></svg>All Messages</a>
+-      <a href="/desktop/people.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"><svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path stroke-linecap="round" d="M3.5 19a5.5 5.5 0 0 1 11 0M14 15.5a4 4 0 0 1 6.5 3.1"/></svg>People</a>
+-      <a href="/desktop/archive-channels.html" aria-current="page" class="flex items-center gap-3 rounded-xl bg-blue-500/20 px-4 py-3 text-sm font-semibold text-white ring-1 ring-inset ring-blue-300/10"><svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m4 13 14-7-4 14-3-5-7-2Z"/><path stroke-linecap="round" d="m11 15 3-3"/></svg>Channels</a>
+-      <a href="/desktop/media-library.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"><svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m5 17 4-4 3 3 2-2 5 3"/></svg><span>Media &amp; Files</span></a>
+-      <a href="/settings.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"><svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M18.5 5.5l-1.4 1.4M6.9 17.1l-1.4 1.4"/></svg><span>Accounts &amp; Settings</span></a>
+-    </nav>
+-    <div class="mt-auto border-t border-white/10 p-4"><div class="rounded-xl bg-white/5 p-4 ring-1 ring-inset ring-white/10"><p class="text-xs font-medium text-slate-400">Signed in as</p><p data-user-email class="mt-1 truncate text-sm font-semibold">Loading…</p><button data-logout type="button" class="mt-4 text-xs font-semibold text-blue-300 transition hover:text-white">Log out</button></div></div>
+-  </aside>
++<body class="lg:!pl-64 min-h-screen bg-slate-50 text-slate-950 antialiased">
++  <div id="appSidebar" class="contents"></div>
+ 
+-  <div class="min-h-screen lg:pl-64">
++  <div class="min-h-screen ">
+     <header class="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-slate-200 bg-white/95 px-5 backdrop-blur sm:px-8 lg:px-10">
+       <a href="/desktop/index.html" class="flex items-center gap-2 lg:hidden" aria-label="TeleSaver dashboard"><img src="/assets/telesaver.png" alt="" class="h-9 w-9 rounded-lg" /><span class="font-bold">TeleSaver</span></a>
+       <p class="hidden min-w-0 text-base font-semibold text-slate-800 sm:block">Welcome, <span id="username" class="truncate">Loading…</span></p>
+--- a/my-node-server/public/desktop/channels.html
++++ b/my-node-server/public/desktop/channels.html
+@@ -12,10 +12,11 @@
+   <script src="../scripts/message_handling_helpers.js"></script>
+   <script defer src="../scripts/socket_load_messages.js"></script>
+   <script src="../scripts/Export_As_PDF_Helpers.js"></script>
+-  <script src="scripts/desktop_sidebar.js"></script>
+   
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body class="bg-gray-100 min-h-screen flex flex-col overflow-hidden">
++<body class="lg:!pl-64 bg-gray-100 min-h-screen flex flex-col overflow-hidden">
++  <div id="appSidebar" class="contents"></div>
+ 
+   <!-- Top bar (centered logo + title) -->
+   <header class="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white py-4 px-6 flex items-center justify-center shadow-md">
+--- a/my-node-server/public/desktop/filters.html
++++ b/my-node-server/public/desktop/filters.html
+@@ -218,8 +218,12 @@
+             }
+         }
+     </style>
++  <script src="https://cdn.tailwindcss.com"></script>
++  <script src="/scripts/jquery-3.0.0.min.js"></script>
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body>
++<body class="lg:!pl-64">
++  <div id="appSidebar" class="contents"></div>
+     <header>
+         <a class="back-button" data-manage-back href="/desktop/index.html">← Back to Manage Account</a>
+         <h1>Filter settings</h1>
+--- a/my-node-server/public/desktop/index.html
++++ b/my-node-server/public/desktop/index.html
+@@ -9,53 +9,13 @@
+   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <script src="../scripts/session_guard.js"></script>
+   <script src="/socket.io/socket.io.js"></script>
+-  <script defer src="scripts/desktop_sidebar.js"></script>
+   <script defer src="../scripts/account_dashboard.js"></script>
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body class="min-h-screen bg-slate-50 text-slate-950 antialiased">
+-  <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#061f42] text-white lg:flex">
+-    <a href="/desktop/index.html" class="flex items-center gap-3 px-7 py-7" aria-label="TeleSaver dashboard">
+-      <img src="/assets/telesaver.png" alt="" class="h-11 w-11 rounded-xl object-cover ring-1 ring-white/15" />
+-      <span class="text-xl font-bold tracking-tight">TeleSaver</span>
+-    </a>
++<body class="lg:!pl-64 min-h-screen bg-slate-50 text-slate-950 antialiased">
++  <div id="appSidebar" class="contents"></div>
+ 
+-    <nav class="mt-3 space-y-2 px-4" aria-label="Dashboard navigation">
+-      <a href="/desktop/index.html" class="flex items-center gap-3 rounded-xl bg-blue-500/20 px-4 py-3 text-sm font-semibold text-white ring-1 ring-inset ring-blue-300/10">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+-        Dashboard
+-      </a>
+-      <a href="/desktop/all-messages.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v12H7l-3 3V5Z"/><path stroke-linecap="round" d="M8 9h8M8 13h5"/></svg>
+-        <span>All Messages</span>
+-      </a>
+-      <a href="/desktop/people.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path stroke-linecap="round" d="M3.5 19a5.5 5.5 0 0 1 11 0M14 15.5a4 4 0 0 1 6.5 3.1"/></svg>
+-        <span>People</span>
+-      </a>
+-      <a href="/desktop/archive-channels.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m4 13 14-7-4 14-3-5-7-2Z"/><path stroke-linecap="round" d="m11 15 3-3"/></svg>
+-        <span>Channels</span>
+-      </a>
+-      <a href="/desktop/media-library.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m5 17 4-4 3 3 2-2 5 3"/></svg>
+-        <span>Media &amp; Files</span>
+-      </a>
+-      <a href="/settings.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
+-        <span>Accounts &amp; Settings</span>
+-      </a>
+-    </nav>
+-
+-    <div class="mt-auto border-t border-white/10 p-4">
+-      <div class="rounded-xl bg-white/5 p-4 ring-1 ring-inset ring-white/10">
+-        <p class="text-xs font-medium text-slate-400">Signed in as</p>
+-        <p data-user-email class="mt-1 truncate text-sm font-semibold">Loading…</p>
+-        <button data-logout type="button" class="mt-4 text-xs font-semibold text-blue-300 transition hover:text-white">Log out</button>
+-      </div>
+-    </div>
+-  </aside>
+-
+-  <div class="min-h-screen lg:pl-64">
++  <div class="min-h-screen ">
+     <header class="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-slate-200 bg-white/95 px-5 backdrop-blur sm:px-8 lg:px-10">
+       <a href="/desktop/index.html" class="flex items-center gap-2 lg:hidden" aria-label="TeleSaver dashboard">
+         <img src="/assets/telesaver.png" alt="" class="h-9 w-9 rounded-lg" />
+--- a/my-node-server/public/desktop/media-library.html
++++ b/my-node-server/public/desktop/media-library.html
+@@ -8,23 +8,12 @@
+   <script src="https://cdn.tailwindcss.com"></script>
+   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <script src="../scripts/session_guard.js"></script>
+-  <script defer src="scripts/desktop_sidebar.js"></script>
+   <script defer src="../scripts/media_library.js"></script>
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body class="min-h-screen bg-slate-50 text-slate-950 antialiased">
+-  <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#061f42] text-white lg:flex">
+-    <a href="/desktop/index.html" class="flex items-center gap-3 px-7 py-7"><img src="/assets/telesaver.png" alt="" class="h-11 w-11 rounded-xl" /><span class="text-xl font-bold">TeleSaver</span></a>
+-    <nav class="mt-3 space-y-2 px-4" aria-label="Dashboard navigation">
+-      <a href="/desktop/index.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-white">▦ <span>Dashboard</span></a>
+-      <a href="/desktop/all-messages.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-white">▤ <span>All Messages</span></a>
+-      <a href="/desktop/people.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-white">♙ <span>People</span></a>
+-      <a href="/desktop/archive-channels.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-white">➤ <span>Channels</span></a>
+-      <a href="/desktop/media-library.html" aria-current="page" class="flex items-center gap-3 rounded-xl bg-blue-500/20 px-4 py-3 text-sm font-semibold text-white ring-1 ring-inset ring-blue-300/10">▧ <span>Media &amp; Files</span></a>
+-      <a href="/settings.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-white">⚙ <span>Accounts &amp; Settings</span></a>
+-    </nav>
+-    <div class="mt-auto border-t border-white/10 p-4"><div class="rounded-xl bg-white/5 p-4"><p class="text-xs text-slate-400">Signed in as</p><p data-user-email class="mt-1 truncate text-sm font-semibold">Loading…</p><button data-logout type="button" class="mt-4 text-xs font-semibold text-blue-300">Log out</button></div></div>
+-  </aside>
+-  <div class="min-h-screen lg:pl-64">
++<body class="lg:!pl-64 min-h-screen bg-slate-50 text-slate-950 antialiased">
++  <div id="appSidebar" class="contents"></div>
++  <div class="min-h-screen ">
+     <header class="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-slate-200 bg-white/95 px-5 backdrop-blur sm:px-8 lg:px-10">
+       <a href="/desktop/index.html" class="flex items-center gap-2 lg:hidden"><img src="/assets/telesaver.png" alt="" class="h-9 w-9 rounded-lg" /><span class="font-bold">TeleSaver</span></a>
+       <p class="hidden text-base font-semibold text-slate-800 sm:block">Welcome, <span id="username">Loading…</span></p>
+--- a/my-node-server/public/desktop/people.html
++++ b/my-node-server/public/desktop/people.html
+@@ -8,36 +8,13 @@
+   <script src="https://cdn.tailwindcss.com"></script>
+   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <script src="../scripts/session_guard.js"></script>
+-  <script defer src="scripts/desktop_sidebar.js"></script>
+   <script defer src="../scripts/people.js"></script>
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body class="min-h-screen bg-slate-50 text-slate-950 antialiased">
+-  <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#061f42] text-white lg:flex">
+-    <a href="/desktop/index.html" class="flex items-center gap-3 px-7 py-7" aria-label="TeleSaver dashboard">
+-      <img src="/assets/telesaver.png" alt="" class="h-11 w-11 rounded-xl object-cover ring-1 ring-white/15" />
+-      <span class="text-xl font-bold tracking-tight">TeleSaver</span>
+-    </a>
+-    <nav class="mt-3 space-y-2 px-4" aria-label="Dashboard navigation">
+-      <a href="/desktop/index.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+-        Dashboard
+-      </a>
+-      <a href="/desktop/all-messages.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v12H7l-3 3V5Z"/><path stroke-linecap="round" d="M8 9h8M8 13h5"/></svg>
+-        All Messages
+-      </a>
+-      <a href="/desktop/people.html" aria-current="page" class="flex items-center gap-3 rounded-xl bg-blue-500/20 px-4 py-3 text-sm font-semibold text-white ring-1 ring-inset ring-blue-300/10">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path stroke-linecap="round" d="M3.5 19a5.5 5.5 0 0 1 11 0M14 15.5a4 4 0 0 1 6.5 3.1"/></svg>
+-        People
+-      </a>
+-      <a href="/desktop/archive-channels.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"><svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m4 13 14-7-4 14-3-5-7-2Z"/><path stroke-linecap="round" d="m11 15 3-3"/></svg><span>Channels</span></a>
+-      <a href="/desktop/media-library.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"><svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m5 17 4-4 3 3 2-2 5 3"/></svg><span>Media &amp; Files</span></a>
+-      <a href="/settings.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"><svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M18.5 5.5l-1.4 1.4M6.9 17.1l-1.4 1.4"/></svg><span>Accounts &amp; Settings</span></a>
+-    </nav>
+-    <div class="mt-auto border-t border-white/10 p-4"><div class="rounded-xl bg-white/5 p-4 ring-1 ring-inset ring-white/10"><p class="text-xs font-medium text-slate-400">Signed in as</p><p data-user-email class="mt-1 truncate text-sm font-semibold">Loading…</p><button data-logout type="button" class="mt-4 text-xs font-semibold text-blue-300 transition hover:text-white">Log out</button></div></div>
+-  </aside>
++<body class="lg:!pl-64 min-h-screen bg-slate-50 text-slate-950 antialiased">
++  <div id="appSidebar" class="contents"></div>
+ 
+-  <div class="min-h-screen lg:pl-64">
++  <div class="min-h-screen ">
+     <header class="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-slate-200 bg-white/95 px-5 backdrop-blur sm:px-8 lg:px-10">
+       <a href="/desktop/index.html" class="flex items-center gap-2 lg:hidden" aria-label="TeleSaver dashboard"><img src="/assets/telesaver.png" alt="" class="h-9 w-9 rounded-lg" /><span class="font-bold">TeleSaver</span></a>
+       <p class="hidden min-w-0 text-base font-semibold text-slate-800 sm:block">Welcome, <span id="username" class="truncate">Loading…</span></p>
+--- a/my-node-server/public/desktop/scripts/desktop_sidebar.js
++++ /dev/null
+@@ -1,69 +0,0 @@
+-$(function () {
+-    // Inject sidebar/backdrop HTML if not present
+-    if (!document.getElementById('sidebarBackdrop')) {
+-        $("body").prepend(`
+-          <div
+-            id="sidebarBackdrop"
+-            class="fixed inset-0 bg-black/40 opacity-0 pointer-events-none transition-opacity duration-300 z-40"
+-          ></div>
+-          <aside
+-            id="rightSidebar"
+-            class="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white text-black shadow-2xl translate-x-full transition-transform duration-300 z-50"
+-            role="dialog"
+-            aria-modal="true"
+-            aria-label="Sidebar"
+-          >
+-            <div class="flex items-center justify-between p-4 border-b">
+-              <h2 class="text-lg font-semibold">Menu</h2>
+-              <button id="closeSidebar" class="px-3 py-2 rounded hover:bg-gray-100">✕</button>
+-            </div>
+-            <div class="p-4 space-y-2">
+-              <a href="filters.html" class="block p-3 rounded-lg hover:bg-gray-100">Filters</a>
+-              <a href="index.html" class="block p-3 rounded-lg hover:bg-gray-100">Messages</a>
+-              <a href="/settings.html" class="block p-3 rounded-lg hover:bg-gray-100">Telegram account / Settings</a>
+-              <button data-logout class="block w-full text-left p-3 rounded-lg text-red-600 hover:bg-red-50">Log out</button>
+-            </div>
+-          </aside>
+-        `);
+-    }
+-
+-    const $sidebar  = $("#rightSidebar");
+-    const $backdrop = $("#sidebarBackdrop");
+-    const $openBtn  = $("#openSidebar");
+-    const $closeBtn = $("#closeSidebar");
+-
+-    function openSidebar() {
+-      $sidebar.removeClass("translate-x-full");
+-      $backdrop.removeClass("opacity-0 pointer-events-none");
+-      $("body").addClass("overflow-hidden");
+-    }
+-
+-    function closeSidebar() {
+-      $sidebar.addClass("translate-x-full");
+-      $backdrop.addClass("opacity-0 pointer-events-none");
+-      $("body").removeClass("overflow-hidden");
+-    }
+-
+-    // Open
+-    $openBtn.on("click", function (e) {
+-      e.stopPropagation();
+-      openSidebar();
+-    });
+-
+-    // Close (X button)
+-    $closeBtn.on("click", function () {
+-      closeSidebar();
+-    });
+-
+-    // Close when clicking backdrop
+-    $backdrop.on("click", function () {
+-      closeSidebar();
+-    });
+-
+-    // Close with ESC
+-    $(document).on("keydown", function (e) {
+-      if (e.key === "Escape") {
+-        closeSidebar();
+-      }
+-    });
+-});
+--- a/my-node-server/public/desktop/sender.html
++++ b/my-node-server/public/desktop/sender.html
+@@ -12,10 +12,11 @@
+   <script src="../scripts/message_handling_helpers.js"></script>
+   <script defer src="../scripts/socket_load_messages.js"></script>
+   <script src="../scripts/Export_As_PDF_Helpers.js"></script>
+-  <script src="scripts/desktop_sidebar.js"></script>
+ 
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body class="h-screen overflow-hidden bg-[#dfe7ed] text-slate-950 antialiased">
++<body class="lg:!pl-64 h-screen overflow-hidden bg-[#dfe7ed] text-slate-950 antialiased">
++  <div id="appSidebar" class="contents"></div>
+ 
+   <!-- Top bar (centered logo + title, sticky, sidebar) -->
+   <header class="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-center border-b border-slate-200 bg-white px-6 text-slate-900 shadow-sm">
+--- a/my-node-server/public/manage-account.html
++++ b/my-node-server/public/manage-account.html
+@@ -8,51 +8,12 @@
+   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <script src="/scripts/session_guard.js"></script>
+   <script defer src="/scripts/manage_account.js"></script>
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body class="min-h-screen bg-slate-100 text-slate-900">
+-  <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#061f42] text-white lg:flex">
+-    <a href="/desktop/index.html" class="flex items-center gap-3 px-7 py-7" aria-label="TeleSaver dashboard">
+-      <img src="/assets/telesaver.png" alt="" class="h-11 w-11 rounded-xl object-cover ring-1 ring-white/15" />
+-      <span class="text-xl font-bold tracking-tight">TeleSaver</span>
+-    </a>
++<body class="lg:!pl-64 min-h-screen bg-slate-100 text-slate-900">
++  <div id="appSidebar" class="contents"></div>
+ 
+-    <nav class="mt-3 space-y-2 px-4" aria-label="Dashboard navigation">
+-      <a href="/desktop/index.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+-        Dashboard
+-      </a>
+-      <a href="/desktop/all-messages.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v12H7l-3 3V5Z"/><path stroke-linecap="round" d="M8 9h8M8 13h5"/></svg>
+-        <span>All Messages</span>
+-      </a>
+-      <a href="/desktop/people.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path stroke-linecap="round" d="M3.5 19a5.5 5.5 0 0 1 11 0M14 15.5a4 4 0 0 1 6.5 3.1"/></svg>
+-        <span>People</span>
+-      </a>
+-      <a href="/desktop/archive-channels.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m4 13 14-7-4 14-3-5-7-2Z"/><path stroke-linecap="round" d="m11 15 3-3"/></svg>
+-        <span>Channels</span>
+-      </a>
+-      <a href="/desktop/media-library.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m5 17 4-4 3 3 2-2 5 3"/></svg>
+-        <span>Media &amp; Files</span>
+-      </a>
+-      <a href="/settings.html" class="flex items-center gap-3 rounded-xl bg-blue-500/20 px-4 py-3 text-sm font-semibold text-white ring-1 ring-inset ring-blue-300/10">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
+-        <span>Accounts &amp; Settings</span>
+-      </a>
+-    </nav>
+-
+-    <div class="mt-auto border-t border-white/10 p-4">
+-      <div class="rounded-xl bg-white/5 p-4 ring-1 ring-inset ring-white/10">
+-        <p class="text-xs font-medium text-slate-400">Signed in as</p>
+-        <p data-user-email class="mt-1 truncate text-sm font-semibold">Loading…</p>
+-        <button data-logout type="button" class="mt-4 text-xs font-semibold text-blue-300 transition hover:text-white">Log out</button>
+-      </div>
+-    </div>
+-  </aside>
+-
+-  <div class="min-h-screen lg:pl-64">
++  <div class="min-h-screen ">
+   <header class="bg-blue-600 text-white shadow p-4">
+     <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-4">
+       <a id="accountsBackLink" href="/desktop/index.html" class="font-semibold hover:underline">← Back to Telegram Accounts</a>
+--- a/my-node-server/public/mobile/channels.html
++++ b/my-node-server/public/mobile/channels.html
+@@ -238,8 +238,10 @@
+       display: inline-block;
+     }
+   </style>
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body>
++<body class="lg:!pl-64">
++  <div id="appSidebar" class="contents"></div>
+   <div class="topbar">
+     <div class="button-group">
+       <h2 id="channel-name">Loading channel…</h2>
+@@ -261,7 +263,6 @@
+   <script src="/scripts/session_guard.js"></script>
+   <script src="/socket.io/socket.io.js"></script>
+   <script src="/scripts/messages_api.js"></script>
+-  <script src="scripts/index_sidebar.js"></script>
+   <script src="/scripts/message_handling_helpers.js"></script>
+   <script defer src="/scripts/socket_load_messages.js"></script>
+   <script src="../scripts/Export_As_PDF_Helpers.js"></script>
+--- a/my-node-server/public/mobile/filters.html
++++ b/my-node-server/public/mobile/filters.html
+@@ -7,7 +7,6 @@
+     <script src="https://cdn.tailwindcss.com"></script>
+     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+     <script src="../scripts/session_guard.js"></script>
+-    <script src="scripts/index_sidebar.js"></script>
+     <style>
+         :root {
+             --bg: #f2f6fb;
+@@ -190,8 +189,10 @@
+             }
+         }
+     </style>
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body>
++<body class="lg:!pl-64">
++  <div id="appSidebar" class="contents"></div>
+ 
+     <div class="topbar">
+         <div>
+--- a/my-node-server/public/mobile/index.html
++++ b/my-node-server/public/mobile/index.html
+@@ -8,11 +8,12 @@
+   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <script src="../scripts/session_guard.js"></script>
+   <script src="/socket.io/socket.io.js"></script>
+-  <script src="scripts/index_sidebar.js"></script>
+   <script src="../scripts/account_dashboard.js"></script>
+ 
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body class="bg-gray-100 min-h-screen flex flex-col">
++<body class="lg:!pl-64 bg-gray-100 min-h-screen flex flex-col">
++  <div id="appSidebar" class="contents"></div>
+   <!-- Header -->
+   <header class="bg-blue-600 text-white py-4 px-6 shadow-md grid grid-cols-[1fr_auto_1fr] items-center sticky top-0 z-30">
+ 
+--- a/my-node-server/public/mobile/scripts/index_sidebar.js
++++ /dev/null
+@@ -1,81 +0,0 @@
+-// Sidebar swipe gesture
+-$(function() {
+-    // Inject sidebar/backdrop HTML if not present
+-    if (!document.getElementById('sidebarBackdrop')) {
+-        $("body").prepend(`
+-          <div
+-            id="sidebarBackdrop"
+-            class="fixed inset-0 bg-black/40 opacity-0 pointer-events-none transition-opacity duration-300 z-40"
+-          ></div>
+-          <aside
+-            id="rightSidebar"
+-            class="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white text-black shadow-2xl translate-x-full transition-transform duration-300 z-50"
+-            role="dialog"
+-            aria-modal="true"
+-            aria-label="Sidebar"
+-          >
+-            <div class="flex items-center justify-between p-4 border-b">
+-              <h2 class="text-lg font-semibold">Menu</h2>
+-              <button id="closeSidebar" class="px-3 py-2 rounded hover:bg-gray-100">✕</button>
+-            </div>
+-            <div class="p-4 space-y-2">
+-              <a href="filters.html" class="block p-3 rounded-lg hover:bg-gray-100">Filters</a>
+-              <a href="index.html" class="block p-3 rounded-lg hover:bg-gray-100">Messages</a>
+-              <a href="/settings.html" class="block p-3 rounded-lg hover:bg-gray-100">Telegram account / Settings</a>
+-              <button data-logout class="block w-full text-left p-3 rounded-lg text-red-600 hover:bg-red-50">Log out</button>
+-            </div>
+-          </aside>
+-        `);
+-    }
+-    let touchStartX = null;
+-    let touchStartY = null;
+-    let touchEndX = null;
+-    let touchEndY = null;
+-    const swipeThreshold = 60; // px
+-    const edgeThreshold = 40; // px from right edge
+-
+-    function openSidebar() {
+-      $("#rightSidebar").removeClass("translate-x-full");
+-      $("#sidebarBackdrop").removeClass("opacity-0 pointer-events-none").addClass("opacity-100");
+-    }
+-
+-    function closeSidebar() {
+-      $("#rightSidebar").addClass("translate-x-full");
+-      $("#sidebarBackdrop").addClass("opacity-0 pointer-events-none").removeClass("opacity-100");
+-    }
+-
+-    $(document).on("touchstart", function (e) {
+-      if (e.touches && e.touches.length === 1) {
+-        const touch = e.touches[0];
+-        touchStartX = touch.clientX;
+-        touchStartY = touch.clientY;
+-      }
+-    });
+-
+-    $(document).on("touchmove", function (e) {
+-      if (e.touches && e.touches.length === 1) {
+-        const touch = e.touches[0];
+-        touchEndX = touch.clientX;
+-        touchEndY = touch.clientY;
+-      }
+-    });
+-
+-    $(document).on("touchend", function (e) {
+-      if (touchStartX !== null && touchEndX !== null) {
+-        // Only trigger if swipe started near right edge and moved left-to-right
+-        const windowWidth = window.innerWidth;
+-        if (
+-          touchStartX > windowWidth - edgeThreshold &&
+-          touchEndX < touchStartX - swipeThreshold &&
+-          Math.abs(touchEndY - touchStartY) < 50
+-        ) {
+-          openSidebar();
+-        }
+-      }
+-      touchStartX = touchEndX = touchStartY = touchEndY = null;
+-    });
+-
+-    // Also keep button and backdrop logic
+-    $("#openSidebar").on("click", openSidebar);
+-    $("#closeSidebar, #sidebarBackdrop").on("click", closeSidebar);
+-});
+--- a/my-node-server/public/mobile/sender.html
++++ b/my-node-server/public/mobile/sender.html
+@@ -221,8 +221,11 @@
+       font-size: 1.05rem;
+     }
+   </style>
++  <script src="https://cdn.tailwindcss.com"></script>
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body>
++<body class="lg:!pl-64">
++  <div id="appSidebar" class="contents"></div>
+   <div class="topbar">
+     <div class="button-group">
+       <h2 id="sender-name">Loading sender…</h2>
+--- a/my-node-server/public/settings.html
++++ b/my-node-server/public/settings.html
+@@ -17,52 +17,13 @@
+     [role="tab"][aria-selected="true"] { color: #2563eb; border-color: #2563eb; }
+     button:focus-visible, a:focus-visible { outline: 3px solid #60a5fa; outline-offset: 4px; }
+   </style>
++  <script defer src="/scripts/sidebar.js"></script>
+ </head>
+-<body class="min-h-screen bg-slate-50 text-slate-950 antialiased">
+-  <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#061f42] text-white lg:flex">
+-    <a href="/desktop/index.html" class="flex items-center gap-3 px-7 py-7" aria-label="TeleSaver dashboard">
+-      <img src="/assets/telesaver.png" alt="" class="h-11 w-11 rounded-xl object-cover ring-1 ring-white/15" />
+-      <span class="text-xl font-bold tracking-tight">TeleSaver</span>
+-    </a>
+-
+-    <nav class="mt-3 space-y-2 px-4" aria-label="Dashboard navigation">
+-      <a href="/desktop/index.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+-        Dashboard
+-      </a>
+-      <a href="/desktop/all-messages.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v12H7l-3 3V5Z"/><path stroke-linecap="round" d="M8 9h8M8 13h5"/></svg>
+-        <span>All Messages</span>
+-      </a>
+-      <a href="/desktop/people.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path stroke-linecap="round" d="M3.5 19a5.5 5.5 0 0 1 11 0M14 15.5a4 4 0 0 1 6.5 3.1"/></svg>
+-        <span>People</span>
+-      </a>
+-      <a href="/desktop/archive-channels.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m4 13 14-7-4 14-3-5-7-2Z"/><path stroke-linecap="round" d="m11 15 3-3"/></svg>
+-        <span>Channels</span>
+-      </a>
+-      <a href="/desktop/media-library.html" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m5 17 4-4 3 3 2-2 5 3"/></svg>
+-        <span>Media &amp; Files</span>
+-      </a>
+-      <a href="/settings.html" aria-current="page" class="flex items-center gap-3 rounded-xl bg-blue-500/20 px-4 py-3 text-sm font-semibold text-white ring-1 ring-inset ring-blue-300/10">
+-        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
+-        <span>Accounts &amp; Settings</span>
+-      </a>
+-    </nav>
+-
+-    <div class="mt-auto border-t border-white/10 p-4">
+-      <div class="rounded-xl bg-white/5 p-4 ring-1 ring-inset ring-white/10">
+-        <p class="text-xs font-medium text-slate-400">Signed in as</p>
+-        <p data-user-email class="mt-1 truncate text-sm font-semibold">Loading…</p>
+-        <button data-logout type="button" class="mt-4 text-xs font-semibold text-blue-300 transition hover:text-white">Log out</button>
+-      </div>
+-    </div>
+-  </aside>
+-
+-
+-<div class="min-h-screen lg:pl-64">
++<body class="lg:!pl-64 min-h-screen bg-slate-50 text-slate-950 antialiased">
++  <div id="appSidebar" class="contents"></div>
++
++
++<div class="min-h-screen ">
+   <header class="flex h-20 items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 sm:px-8 lg:px-10">
+     <a id="dashboardLink" href="/desktop/index.html" class="text-sm font-semibold text-slate-600 hover:text-blue-600">&larr; Dashboard</a>
+     <div class="flex items-center gap-3"><span data-user-email class="hidden text-sm text-slate-500 sm:block">Loading...</span><span data-user-initial class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 font-bold text-white">&hellip;</span></div>
+--- a/my-node-server/test/frontendStep7.test.js
++++ b/my-node-server/test/frontendStep7.test.js
+@@ -65,8 +65,8 @@
+   assert.match(migration, /ADD COLUMN `is_outgoing` boolean/i);
+ });
+ 
+-test('desktop dashboard reserves user-focused navigation routes', () => {
+-  const html = read('desktop/index.html');
++test('shared sidebar reserves user-focused navigation routes', () => {
++  const html = read('scripts/sidebar.js');
+   for (const route of [
+     '/desktop/all-messages.html',
+     '/desktop/people.html',
+@@ -74,18 +74,18 @@
+     '/desktop/media-library.html',
+     '/settings.html'
+   ]) {
+-    assert.ok(html.includes(`href="${route}"`), `missing dashboard route ${route}`);
++    assert.ok(html.includes(route), `missing dashboard route ${route}`);
+   }
+   assert.doesNotMatch(html, />Archives</);
+   assert.doesNotMatch(html, /Saved Filters/);
+-  assert.match(html, /Accounts &amp; Settings/);
++  assert.match(html, /Accounts & Settings/);
+ });
+ 
+ test('all messages page loads 50 then paginates by 15 at the scroll boundary', () => {
+   const html = read('desktop/all-messages.html');
+   const source = read('scripts/all_messages.js');
+   assert.match(html, /session_guard\.js/);
+-  assert.match(html, /desktop_sidebar\.js/);
++  assert.match(html, /scripts\/sidebar\.js/);
+   assert.match(html, /id="messageSearch"/);
+   assert.match(html, /placeholder="Search messages…"/);
+   assert.match(html, /id="openSidebar"/);
+@@ -142,7 +142,7 @@
+   assert.match(html, /session_guard\.js/);
+   assert.match(html, /id="peopleSearch"/);
+   assert.match(html, /id="peopleList"/);
+-  assert.match(html, /aria-current="page"/);
++  assert.match(html, /id="appSidebar"/);
+   assert.match(source, /\/messages\/senders/);
+   assert.match(source, /telegram_account_id/);
+   assert.match(source, /\/desktop\/sender\.html/);
+@@ -167,7 +167,7 @@
+   assert.match(html, /session_guard\.js/);
+   assert.match(html, /id="channelSearch"/);
+   assert.match(html, /id="channelDirectory"/);
+-  assert.match(html, /aria-current="page"/);
++  assert.match(html, /id="appSidebar"/);
+   assert.match(source, /\/messages\/channels/);
+   assert.match(source, /telegram_account_id/);
+   assert.match(source, /\/desktop\/channels\.html/);

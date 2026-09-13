@@ -65,8 +65,8 @@ test('worker and ingestion persist message direction', () => {
   assert.match(migration, /ADD COLUMN `is_outgoing` boolean/i);
 });
 
-test('desktop dashboard reserves user-focused navigation routes', () => {
-  const html = read('desktop/index.html');
+test('shared sidebar reserves user-focused navigation routes', () => {
+  const html = read('scripts/sidebar.js');
   for (const route of [
     '/desktop/all-messages.html',
     '/desktop/people.html',
@@ -74,18 +74,18 @@ test('desktop dashboard reserves user-focused navigation routes', () => {
     '/desktop/media-library.html',
     '/settings.html'
   ]) {
-    assert.ok(html.includes(`href="${route}"`), `missing dashboard route ${route}`);
+    assert.ok(html.includes(route), `missing dashboard route ${route}`);
   }
   assert.doesNotMatch(html, />Archives</);
   assert.doesNotMatch(html, /Saved Filters/);
-  assert.match(html, /Accounts &amp; Settings/);
+  assert.match(html, /Accounts & Settings/);
 });
 
 test('all messages page loads 50 then paginates by 15 at the scroll boundary', () => {
   const html = read('desktop/all-messages.html');
   const source = read('scripts/all_messages.js');
   assert.match(html, /session_guard\.js/);
-  assert.match(html, /desktop_sidebar\.js/);
+  assert.match(html, /scripts\/sidebar\.js/);
   assert.match(html, /id="messageSearch"/);
   assert.match(html, /placeholder="Search messages…"/);
   assert.match(html, /id="openSidebar"/);
@@ -142,7 +142,7 @@ test('people page loads, filters, and links senders with Telegram account contex
   assert.match(html, /session_guard\.js/);
   assert.match(html, /id="peopleSearch"/);
   assert.match(html, /id="peopleList"/);
-  assert.match(html, /aria-current="page"/);
+  assert.match(html, /id="appSidebar"/);
   assert.match(source, /\/messages\/senders/);
   assert.match(source, /telegram_account_id/);
   assert.match(source, /\/desktop\/sender\.html/);
@@ -167,7 +167,7 @@ test('channels page loads, filters, and links channels with Telegram account con
   assert.match(html, /session_guard\.js/);
   assert.match(html, /id="channelSearch"/);
   assert.match(html, /id="channelDirectory"/);
-  assert.match(html, /aria-current="page"/);
+  assert.match(html, /id="appSidebar"/);
   assert.match(source, /\/messages\/channels/);
   assert.match(source, /telegram_account_id/);
   assert.match(source, /\/desktop\/channels\.html/);

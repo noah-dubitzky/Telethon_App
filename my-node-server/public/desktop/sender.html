@@ -12,29 +12,31 @@
   <script src="../scripts/message_handling_helpers.js"></script>
   <script defer src="../scripts/socket_load_messages.js"></script>
   <script src="../scripts/Export_As_PDF_Helpers.js"></script>
-  <script src="scripts/desktop_sidebar.js"></script>
 
+  <script defer src="/scripts/sidebar.js"></script>
 </head>
-<body class="h-screen overflow-hidden bg-[#dfe7ed] text-slate-950 antialiased">
+<body class="lg:!pl-64 h-screen overflow-hidden bg-[#dfe7ed] text-slate-950 antialiased">
+  <div id="appSidebar" class="contents"></div>
 
-  <!-- Top bar (centered logo + title, sticky, sidebar) -->
-  <header class="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-center border-b border-slate-200 bg-white px-6 text-slate-900 shadow-sm">
-    <div class="grid grid-cols-[1fr_auto_1fr] items-center w-full">
-      <div></div>
-      <div class="flex items-center justify-center space-x-3">
-        <img src="/assets/telesaver.png" alt="App Logo" class="h-10 w-10 rounded-xl shadow-sm" />
-        <h1 class="text-2xl font-bold text-center">Telesaver — Messages</h1>
-      </div>
-      <div class="flex justify-end">
-        <button id="openSidebar" class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 p-2 text-white shadow-sm transition hover:bg-blue-700" aria-label="Open account menu">
-          <img src="/assets/SideBar.png" alt="Open Sidebar" class="h-9 w-9 shadow-md cursor-pointer hover:scale-105 transition-transform" />
-        </button>
-      </div>
-    </div>
-  </header>
+  <!-- Dashboard header -->
+    <header class="sticky top-0 z-20 flex h-20 shrink-0 items-center gap-4 border-b border-slate-200 bg-white/95 px-5 backdrop-blur sm:px-8 lg:px-10">
+      <a href="/desktop/index.html" class="flex items-center gap-2 lg:hidden" aria-label="TeleSaver dashboard">
+        <img src="/assets/telesaver.png" alt="" class="h-9 w-9 rounded-lg" />
+        <span class="font-bold">TeleSaver</span>
+      </a>
+      <p class="hidden min-w-0 text-base font-semibold text-slate-800 sm:block">Welcome, <span id="username" class="truncate">Loading…</span></p>
+      <form action="/desktop/all-messages.html" method="get" role="search" class="relative ml-auto hidden w-full max-w-md md:block">
+        <label for="conversationSearch" class="sr-only">Search all messages</label>
+        <svg aria-hidden="true" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg>
+        <input id="conversationSearch" name="q" type="search" placeholder="Search Telegram accounts…" class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" />
+      </form>
+      <button id="openSidebar" type="button" class="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 md:ml-2" aria-label="Open account menu">
+        <span data-user-initial aria-hidden="true">…</span>
+      </button>
+    </header>
 
   <!-- Content wrapper -->
-  <main class="mx-auto flex h-[calc(100vh-4rem)] w-full max-w-6xl flex-col px-4 py-5 sm:px-6">
+  <main class="mx-auto flex h-[calc(100vh-5rem)] w-full max-w-6xl flex-col px-4 py-5 sm:px-6">
     <div class="mb-4 flex shrink-0 items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
       <div class="flex min-w-0 items-center space-x-3">
         <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8a9 9 0 100-18 9 9 0 000 18z"/></svg>
