@@ -14,8 +14,10 @@
   <script src="../scripts/Export_As_PDF_Helpers.js"></script>
 
   <script defer src="/scripts/sidebar.js"></script>
+  <script defer src="/scripts/conversation_search.js"></script>
+  <style>#messages [hidden] { display: none !important; }</style>
 </head>
-<body class="lg:!pl-64 h-screen overflow-hidden bg-[#dfe7ed] text-slate-950 antialiased">
+<body class="lg:!pl-64 flex h-screen flex-col overflow-hidden bg-slate-50 text-slate-950 antialiased">
   <div id="appSidebar" class="contents"></div>
 
   <!-- Dashboard header -->
@@ -24,25 +26,28 @@
         <img src="/assets/telesaver.png" alt="" class="h-9 w-9 rounded-lg" />
         <span class="font-bold">TeleSaver</span>
       </a>
-      <p class="hidden min-w-0 text-base font-semibold text-slate-800 sm:block">Welcome, <span id="username" class="truncate">Loading…</span></p>
-      <form action="/desktop/all-messages.html" method="get" role="search" class="relative ml-auto hidden w-full max-w-md md:block">
-        <label for="conversationSearch" class="sr-only">Search all messages</label>
+      <a href="/settings.html" class="hidden min-w-0 items-center gap-3 rounded-xl px-2 py-1 transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 lg:flex" aria-label="Open Accounts and Settings">
+        <span data-user-initial aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 font-bold text-white">&hellip;</span>
+        <span data-user-email class="max-w-64 truncate text-sm text-slate-500">Loading...</span>
+      </a>
+      <div role="search" class="relative ml-auto hidden w-full max-w-md md:block">
+        <label for="conversationSearch" class="sr-only">Search this conversation</label>
         <svg aria-hidden="true" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg>
-        <input id="conversationSearch" name="q" type="search" placeholder="Search Telegram accounts…" class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" />
-      </form>
+        <input id="conversationSearch" name="q" type="search" placeholder="Search messages..." class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" />
+      </div>
       <button id="openSidebar" type="button" class="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 md:ml-2" aria-label="Open account menu">
         <span data-user-initial aria-hidden="true">…</span>
       </button>
     </header>
 
   <!-- Content wrapper -->
-  <main class="mx-auto flex h-[calc(100vh-5rem)] w-full max-w-6xl flex-col px-4 py-5 sm:px-6">
-    <div class="mb-4 flex shrink-0 items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+  <main class="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col px-5 py-5 sm:px-8 lg:px-10">
+    <div class="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
       <div class="flex min-w-0 items-center space-x-3">
         <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8a9 9 0 100-18 9 9 0 000 18z"/></svg>
-        <div>
-          <h2 class="truncate text-lg font-bold text-slate-900">
-            Sender: <span id="sender-name" class="font-extrabold text-purple-700 drop-shadow">Loading...</span>
+        <div class="min-w-0">
+          <h2 class="break-words text-lg font-bold text-slate-900">
+            Sender: <span id="sender-name" class="font-bold text-blue-600">Loading...</span>
           </h2>
           <p class="hidden text-sm text-slate-500">
             Sender ID: <span id="sender-id">—</span>
@@ -52,21 +57,20 @@
           </p>
         </div>
       </div>
-      <div class="flex items-center gap-2 sm:gap-3">
-        <button id="download-messages" class="flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-700">
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <button id="download-messages" type="button" class="flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-700">
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 4v12"/></svg>
           Download
         </button>
-        <a id="account-back-link" href="/desktop/index.html" class="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow transition border border-blue-600">← Back to account</a>
+        <a id="account-back-link" href="/desktop/index.html" class="flex items-center rounded-xl border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">← Back to account</a>
       </div>
     </div>
+
+    <p id="conversationNoResults" class="hidden p-6 text-center text-slate-500" role="status" hidden>no results</p>
 
     <!-- Messages list -->
     <section id="messages" class="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-2xl border border-slate-300/70 bg-[#dfe7ed] py-4 shadow-inner" style="background-image:radial-gradient(circle at 1px 1px,rgba(71,85,105,.16) 1px,transparent 0);background-size:24px 24px;">
       <div class="p-6 text-gray-500">Loading messages…</div>
-      <div class="p-6 text-gray-500">Loading messages…</div>
-      <!-- Match message view styling -->
-      <!-- Add flex-1, overflow-y-scroll, min-h-0, px-2, pt-2, max-height -->
     </section>
 
   </main>
@@ -128,7 +132,7 @@
         let isLoading = false;
         let hasMore = !contextResponse && rows.length === 50;
         async function loadOlderMessages() {
-          if (isLoading || !hasMore) return;
+          if (isLoading || !hasMore || window.ConversationSearch?.blocksPagination()) return;
           isLoading = true;
           const oldScrollHeight = box[0].scrollHeight;
           try {

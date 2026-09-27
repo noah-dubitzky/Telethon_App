@@ -97,7 +97,6 @@
 
     const filterPath = mobile ? '/mobile/filters.html' : '/desktop/filters.html';
     $('#advancedFiltersLink').attr('href', `${filterPath}?telegram_account_id=${encodeURIComponent(accountId)}`);
-    $('#accountsBackLink').attr('href', mobile ? '/mobile/index.html' : '/desktop/index.html');
     $('#manageLoading').addClass('hidden');
     $('#manageContent').removeClass('hidden');
   }
@@ -136,6 +135,10 @@
   }
 
   $(function () {
+    const dashboardPath = mobile ? '/mobile/index.html' : '/desktop/index.html';
+    $('#accountsBackLink').attr('href', validAccountId(accountId)
+      ? `${dashboardPath}?telegram_account_id=${encodeURIComponent(accountId)}`
+      : dashboardPath);
     loadManagement();
 
     $('#reconnectAccount').on('click', function () {

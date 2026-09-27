@@ -10,21 +10,29 @@
   <script defer src="/scripts/manage_account.js"></script>
   <script defer src="/scripts/sidebar.js"></script>
 </head>
-<body class="lg:!pl-64 min-h-screen bg-slate-100 text-slate-900">
+<body class="lg:!pl-64 min-h-screen bg-slate-50 text-slate-950 antialiased">
   <div id="appSidebar" class="contents"></div>
 
   <div class="min-h-screen ">
-  <header class="bg-blue-600 text-white shadow p-4">
-    <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-4">
-      <a id="accountsBackLink" href="/desktop/index.html" class="font-semibold hover:underline">← Back to Telegram Accounts</a>
-      <div class="flex items-center gap-3">
-        <img src="/assets/telesaver.png" alt="" class="h-9 w-9 rounded-full" />
-        <h1 class="font-bold text-lg">Manage Telegram Account</h1>
-      </div>
-    </div>
-  </header>
+    <header class="sticky top-0 z-20 flex h-20 shrink-0 items-center gap-4 border-b border-slate-200 bg-white/95 px-5 backdrop-blur sm:px-8 lg:px-10">
+      <a href="/desktop/index.html" class="flex items-center gap-2 lg:hidden" aria-label="TeleSaver dashboard">
+        <img src="/assets/telesaver.png" alt="" class="h-9 w-9 rounded-lg" />
+        <span class="font-bold">TeleSaver</span>
+      </a>
+      <a href="/settings.html" class="hidden min-w-0 items-center gap-3 rounded-xl px-2 py-1 transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 lg:flex" aria-label="Open Accounts and Settings">
+        <span data-user-initial aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 font-bold text-white">&hellip;</span>
+        <span data-user-email class="max-w-64 truncate text-sm text-slate-500">Loading...</span>
+      </a>
+      <button id="openSidebar" type="button" class="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 " aria-label="Open account menu">
+        <span data-user-initial aria-hidden="true">…</span>
+      </button>
+    </header>
 
   <main class="max-w-4xl mx-auto p-4 sm:p-7">
+    <div class="mb-7 flex flex-wrap items-center justify-between gap-4">
+      <h1 class="text-3xl font-bold tracking-tight">Manage Telegram Account</h1>
+      <a id="accountsBackLink" href="/desktop/index.html" class="shrink-0 rounded-xl border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500">&larr; Back to Telegram Account</a>
+    </div>
     <div id="manageLoading" class="bg-white rounded-2xl shadow p-8 text-center text-slate-500" role="status">
       Loading Telegram account…
     </div>

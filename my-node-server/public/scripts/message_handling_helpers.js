@@ -76,7 +76,7 @@ function renderMessage(msg){
 
     if(Helpers.compareDates(msg.sent_at.slice(0,10), latest_sent_date) == 1){
         latest_sent_date = msg.sent_at.slice(0,10);
-        date_header = `<div class="w-full flex justify-center my-5">
+        date_header = `<div data-message-date class="w-full flex justify-center my-5">
             <span class="inline-block rounded-full bg-slate-700/75 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur">
                 ${latest_sent_date}
             </span>
@@ -96,7 +96,7 @@ function renderMessage(msg){
 
     return `
     ${date_header}
-    <div class="flex w-full ${outgoing ? 'justify-end' : 'justify-start'} px-3 py-1 sm:px-5">
+    <div data-message-row class="flex w-full ${outgoing ? 'justify-end' : 'justify-start'} px-3 py-1 sm:px-5">
       <article${messageAnchor} class="message relative max-w-[82%] rounded-2xl px-3.5 py-2.5 shadow-sm ring-1 ring-inset transition-all duration-300 sm:max-w-[70%] ${outgoing ? 'rounded-br-md bg-[#d9fdd3] text-slate-900 ring-emerald-200' : 'rounded-bl-md bg-white text-slate-900 ring-slate-200'}" style="width:min(${mediaWidth}px, 100%);">
         <div class="flex flex-col items-start">
             <span class="sender" style="display:none;">${msg.sender_name || ""}</span>
@@ -129,7 +129,7 @@ function updateNewMessages(msg){
     if(Helpers.compareDates(msg.sent_at.slice(0,10), latest_sent_date) == 1){
 
         latest_sent_date = msg.sent_at.slice(0,10);
-        date_header = `<div class="w-full text-center">${latest_sent_date}</div>`;
+        date_header = `<div data-message-date class="w-full text-center">${latest_sent_date}</div>`;
 
         box.append(date_header);
 
