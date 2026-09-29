@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "test:approval": "node test/adminApproval.test.cjs && node test/mediaAccessRevocation.test.cjs && node test/workerApproval.test.cjs",
+    "test:admin-ui": "node test/adminFrontend.test.cjs",
     "test:retention": "node test/retention.test.cjs",
     "test:storage": "node test/storage.test.cjs",
     "test": "node test/sessionEncryption.test.js && node test/frontendStep6.test.js && node test/frontendStep7.test.js && node test/backendStep8.test.js && node test/frontendStep9.test.js && node test/accountControls.test.js && node test/realtimeStep10.test.js && node test/s3MediaStep10.test.js && node test/s3MediaPart2.test.js && node test/profileEditing.test.cjs",

@@ -36,6 +36,7 @@ class ActiveClient:
     client: TelegramClient
     account_id: int
     user_id: int
+    auth_version: int = 0
 
 
 class S3MediaStorage:
@@ -144,7 +145,15 @@ class S3MediaStorage:
                 return None
             try:
                 upload_args = {"ContentType": mime_type} if mime_type else None
-                await asyncio.to_thread(self.client.upload_file, str(temp_path), self.bucket, key, upload_args)
+                upload = asyncio.create_task(asyncio.to_thread(
+                    self.client.upload_file, str(temp_path), self.bucket, key, upload_args))
+                try:
+                    await asyncio.shield(upload)
+                except asyncio.CancelledError:
+                    # boto3's transfer thread cannot be cancelled by asyncio.
+                    # Drain it before deleting its input file. No ingestion follows.
+                    await upload
+                    raise
                 uploaded = True
             except Exception as error:
                 log.error("s3 upload failed user=%s account=%s message=%s media_type=%s s3_key=%s type=%s",
@@ -175,6 +184,7 @@ class ActiveClientManager:
         self.backend = backend
         self.clients = {}
         self.locks = {}
+        self.event_tasks = {}
         self.media_storage = S3MediaStorage()
         self.timezone = ZoneInfo(os.getenv("ARCHIVE_TIMEZONE", "America/New_York"))
 
@@ -207,23 +217,31 @@ class ActiveClientManager:
                     await self.backend.set_status(account_id, "revoked")
                     log.warning("account=%s session revoked", account_id)
                     return False
-                self.clients[account_id] = ActiveClient(client, account_id, int(account["user_id"]))
+                self.clients[account_id] = ActiveClient(client, account_id, int(account["user_id"]), int(account["auth_version"]))
                 await self.backend.set_status(account_id, "connected")
                 log.info("account=%s started", account_id)
                 return True
             except Exception:
+                self.clients.pop(account_id, None)
                 if client:
                     await client.disconnect()
                 await self.backend.set_status(account_id, "error")
                 raise
 
-    async def stop_account(self, account_id, status="disconnected"):
+    async def stop_account(self, account_id, status="disconnected", persist=True):
         lock = self.locks.setdefault(account_id, asyncio.Lock())
         async with lock:
             active = self.clients.pop(account_id, None)
+            tasks = list(self.event_tasks.get(account_id, set()))
             if active:
                 await active.client.disconnect()
-            await self.backend.set_status(account_id, status)
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+            if persist:
+                await self.backend.set_status(account_id, status)
             log.info("account=%s stopped", account_id)
             return active is not None
 
@@ -232,15 +250,35 @@ class ActiveClientManager:
         return await self.start_account(account_id)
 
     async def close(self):
-        await asyncio.gather(*(active.client.disconnect() for active in list(self.clients.values())), return_exceptions=True)
-        self.clients.clear()
+        # Normal process shutdown must retain eligibility for startup restoration.
+        await asyncio.gather(*(self.stop_account(account_id, persist=False) for account_id in list(self.clients)), return_exceptions=True)
+
+    async def reconcile_approval(self):
+        try:
+            eligible = {int(row['id']): int(row['auth_version']) for row in await self.backend.eligibility()}
+        except Exception:
+            # No backend/DB means no authorization lease: disconnect all clients.
+            eligible = {}
+        stopped = [account_id for account_id, active in list(self.clients.items())
+                   if eligible.get(account_id) != active.auth_version]
+        await asyncio.gather(*(self.stop_account(account_id) for account_id in stopped), return_exceptions=True)
+
+    async def monitor_approval(self):
+        while True:
+            await self.reconcile_approval()
+            await asyncio.sleep(2)
 
     def _handler(self, account_id):
         async def handle(event):
+            task = asyncio.current_task()
+            tasks = self.event_tasks.setdefault(account_id, set())
+            tasks.add(task)
             try:
                 await self._process_event(account_id, event)
             except Exception as error:
                 log.error("account=%s event failed type=%s", account_id, type(error).__name__)
+            finally:
+                tasks.discard(task)
         return handle
 
     async def _process_event(self, account_id, event):
@@ -255,7 +293,8 @@ class ActiveClientManager:
             if not await self.backend.filter_allowed(filter_payload):
                 return
         except Exception as error:
-            log.warning("account=%s filter check failed-open type=%s", account_id, type(error).__name__)
+            log.warning("account=%s filter check failed-closed type=%s", account_id, type(error).__name__)
+            return
         active = self.clients.get(account_id)
         if not active:
             raise RuntimeError(f"No trusted active account context for account {account_id}")
@@ -273,6 +312,7 @@ class ActiveClientManager:
         if not text and not media:
             return
         payload = {
+            "auth_version": active.auth_version,
             "telegram_account_id": account_id,
             "telegram_message_id": event.message.id if event.message else None,
             "telegram_chat_id": event.chat_id,
@@ -310,12 +350,17 @@ async def run():
     await backend.open()
     manager = ActiveClientManager(backend)
     control = ControlServer(manager)
+    monitor = None
     try:
         await control.start()
         await manager.restore_all()
+        monitor = asyncio.create_task(manager.monitor_approval())
         log.info("worker ready accounts=%s", manager.running_account_ids())
         await asyncio.Event().wait()
     finally:
+        if monitor:
+            monitor.cancel()
+            await asyncio.gather(monitor, return_exceptions=True)
         await control.close()
         await manager.close()
         await backend.close()

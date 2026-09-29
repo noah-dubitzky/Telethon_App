@@ -61,6 +61,9 @@ app.locals.sessionCookieName = sessionCookieName;
 app.locals.sessionCookieClearOptions = sessionCookieClearOptions;
 
 app.use(express.json());
+// Mount BEFORE the normal session middleware: express-session will not replace
+// an already attached req.session, even when given a different cookie name.
+app.use('/api/admin', require('./middleware/adminSession')(), require('./routes/admin'));
 const sessionMiddleware = session({
   name: sessionCookieName,
   secret: process.env.SESSION_SECRET,

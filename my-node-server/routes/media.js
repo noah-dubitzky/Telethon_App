@@ -23,7 +23,10 @@ router.get('/*', async (req, res) => {
       [req.auth.userId, publicPath, publicPath.slice(1), `my-node-server/public${publicPath}`]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Media not found' });
+    res.set('Cache-Control', 'private, no-store');
+    const guard = require('../services/protectedStream').watchTransfer(req, res);
     return res.sendFile(absolutePath, err => {
+      guard.cleanup();
       if (err && !res.headersSent) res.status(404).json({ error: 'Media not found' });
     });
   } catch (err) {

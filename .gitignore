@@ -2,5 +2,6 @@ session_name.session
 *.session
 *.session-journal
 .env
+s3-policy-before-approval-*.json
 __pycache__/
 my-node-server/public/uploads/[0-9]*/

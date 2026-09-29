@@ -26,12 +26,13 @@ router.post('/', requireWorker, async (req, res) => {
   const accountId = Number(telegram_account_id);
   if (!Number.isSafeInteger(accountId) || accountId <= 0) return res.status(400).json({ error: 'telegram_account_id is required' });
 
-  const allowed = await isMessageAllowed({
+  let allowed;
+  try { allowed = await isMessageAllowed({
     external_sender_id: sender_id,
     sender_name: sender_name,
     channel_key: channel_name,
     telegram_account_id: accountId
-  });
+  }); } catch (_) { return res.status(503).json({ error: 'Unable to verify archive access' }); }
 
   if (!allowed) {
     return res.status(204).end(); // skip silently
@@ -48,10 +49,23 @@ router.post('/', requireWorker, async (req, res) => {
   }
 
   const sentAtStr = timestamp; // no conversion at all
-  const conn = await pool.getConnection();
+  let conn;
+  try { conn = await pool.getConnection(); }
+  catch (_) { return res.status(503).json({ error: 'Unable to verify archive access' }); }
   
   try {
     await conn.beginTransaction();
+
+    // Lock the owner until persistence completes. Suspension locks the same row,
+    // so no message can commit after a completed suspension transaction.
+    const [eligibility] = await conn.execute(`SELECT u.is_approved, u.status, u.auth_version
+      FROM users u JOIN telegram_accounts ta ON ta.user_id = u.id
+      WHERE ta.id = ? FOR UPDATE`, [accountId]);
+    if (!eligibility[0] || Number(eligibility[0].is_approved) !== 1 || eligibility[0].status !== 'active'
+        || Number(eligibility[0].auth_version) !== req.body.auth_version) {
+      await conn.rollback();
+      return res.status(403).json({ error: 'ACCOUNT_NOT_APPROVED' });
+    }
 
     let senderPk = null;
 

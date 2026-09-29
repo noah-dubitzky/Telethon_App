@@ -76,7 +76,15 @@ function createRealtime({ io, sessionMiddleware, sessionStore, isSessionValid })
     sockets.filter(socket => socket.data.sessionId !== sessionId).forEach(socket => socket.disconnect(true));
   }
 
-  return { emitToUser, disconnectSession, disconnectOtherSessions, roomForUser };
+  async function disconnectUser(userId) {
+    const sockets = await io.in(roomForUser(userId)).fetchSockets();
+    for (const socket of sockets) {
+      socket.emit('accountSuspended', { error: 'ACCOUNT_NOT_APPROVED' });
+      socket.disconnect(true);
+    }
+  }
+
+  return { emitToUser, disconnectSession, disconnectOtherSessions, disconnectUser, roomForUser };
 }
 
 module.exports = { createRealtime, roomForUser, wrapSessionMiddleware };

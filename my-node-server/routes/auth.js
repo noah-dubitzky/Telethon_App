@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const pool = require('../public/scripts/db');
 const requireAuth = require('../middleware/requireAuth');
+const { NOT_APPROVED } = require('../services/sessionValidity');
 
 const router = express.Router();
 const MIN_PASSWORD_LENGTH = 12;
@@ -49,8 +50,8 @@ router.post('/register', async (req, res) => {
   try {
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const [result] = await pool.execute(
-      `INSERT INTO users (email, password_hash, status)
-       VALUES (?, ?, 'active')`,
+      `INSERT INTO users (email, password_hash, status, is_approved)
+       VALUES (?, ?, 'active', FALSE)`,
       [email, passwordHash]
     );
     const [users] = await pool.execute(
@@ -58,11 +59,8 @@ router.post('/register', async (req, res) => {
       [result.insertId]
     );
 
-    await regenerateSession(req);
-    req.session.userId = result.insertId;
-    req.session.authVersion = 0;
-    await saveSession(req);
-    return res.status(201).json({ user: users[0] });
+    return res.status(201).json({ user: users[0], approval_pending: true,
+      message: 'Your account has been created and is awaiting administrator approval.' });
   } catch (error) {
     if (error && error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ error: 'An account with that email already exists' });
@@ -82,7 +80,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const [users] = await pool.execute(
-      `SELECT id, email, display_name, password_hash, auth_version, status, created_at, updated_at
+      `SELECT id, email, display_name, password_hash, auth_version, status, is_approved, created_at, updated_at
        FROM users WHERE email = ? LIMIT 1`,
       [email]
     );
@@ -93,6 +91,7 @@ router.post('/login', async (req, res) => {
     if (!passwordMatches || user.status !== 'active') {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
+    if (Number(user.is_approved) !== 1) return res.status(403).json(NOT_APPROVED);
 
     await regenerateSession(req);
     req.session.userId = user.id;
@@ -129,6 +128,7 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', requireAuth, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   try {
     const [users] = await pool.execute(
       `SELECT ${SAFE_USER_COLUMNS},

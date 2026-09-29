@@ -35,7 +35,7 @@
       return 'The server is unavailable. Please try again.';
     }
 
-    return xhr.responseJSON?.error || fallback;
+    return xhr.responseJSON?.message || xhr.responseJSON?.error || fallback;
   }
 
   function showForm(name) {
@@ -49,6 +49,9 @@
   }
 
   $(function () {
+    if (new URLSearchParams(window.location.search).get('reason') === 'account-not-approved') {
+      message('Your Telesaver account has not been approved yet.');
+    }
     $.get('/api/auth/me')
       .done(function () {
         window.location.replace(dashboard);
@@ -120,7 +123,8 @@
         })
       })
         .done(function () {
-          window.location.assign('/settings.html');
+          showForm('login');
+          message('Your account has been created and is awaiting administrator approval.', false);
         })
         .fail(function (xhr) {
           message(errorMessage(xhr, 'Unable to create account.'));

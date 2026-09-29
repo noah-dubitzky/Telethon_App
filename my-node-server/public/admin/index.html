@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow"><title>Telesaver Admin</title>
+  <style>
+    * { box-sizing: border-box; } body { font: 16px system-ui,sans-serif; margin: 0; color: #17243b; background: #f3f6fb; }
+    main { max-width: 1100px; margin: 48px auto; padding: 24px; } h1 { margin-top: 0; }
+    section { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 12px #17243b12; }
+    form { max-width: 360px; } label { display: block; margin: 16px 0; } input { display: block; width: 100%; margin-top: 6px; padding: 10px; border: 1px solid #a9b5c6; border-radius: 6px; }
+    button { padding: 10px 16px; border: 0; border-radius: 6px; background: #244ce3; color: white; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: default; } .revoke { background: #a52735; } .toolbar { display: flex; gap: 12px; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+    .table-wrap { overflow-x: auto; } table { width: 100%; border-collapse: collapse; } th,td { text-align: left; padding: 14px 10px; border-bottom: 1px solid #e3e8ef; }
+    #message { min-height: 24px; white-space: pre-wrap; } [hidden] { display: none !important; }
+    nav { display: flex; gap: 12px; align-items: center; margin-top: 20px; }
+  </style>
+  <script src="/scripts/admin.js" defer></script>
+</head>
+<body><main><h1>Telesaver Admin</h1><p id="message" role="status" aria-live="polite">Checking administrator session…</p>
+  <section id="loginPanel" hidden><h2>Administrator login</h2><form id="loginForm">
+    <label>Username<input name="username" autocomplete="username" maxlength="100" required></label>
+    <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit">Log in</button></form></section>
+  <section id="dashboard" hidden><div class="toolbar"><h2>Users</h2><div><button id="refresh">Refresh</button> <button id="logout">Log out</button></div></div>
+    <div class="table-wrap"><table><thead><tr><th>User ID</th><th>Email</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody id="users"></tbody></table></div>
+    <nav aria-label="User pages"><button id="previous">Previous</button><span id="page"></span><button id="next">Next</button></nav>
+  </section>
+</main></body></html>

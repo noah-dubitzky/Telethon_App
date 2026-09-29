@@ -21,7 +21,7 @@ class ManagerTests(unittest.IsolatedAsyncioTestCase):
         self.env.stop()
 
     async def test_text_disabled_preserves_media_without_caption_and_skips_empty_messages(self):
-        self.manager.clients[27] = SimpleNamespace(user_id=14)
+        self.manager.clients[27] = SimpleNamespace(user_id=14, auth_version=0)
         self.backend.storage_settings.return_value = dict(save_text=False, save_photos=True,
             save_videos=True, save_audio=True, save_files=True, save_pdfs=True, max_file_size_mb=None)
         self.manager._download_media = AsyncMock(return_value={'s3_key': 'test', '_temp_path': 'temp'})
@@ -51,7 +51,7 @@ class ManagerTests(unittest.IsolatedAsyncioTestCase):
         client.disconnect = AsyncMock()
         client.is_connected.return_value = True
         client_type.return_value = client
-        self.backend.account.return_value = {'id': 27, 'user_id': 14, 'session': 'saved-session'}
+        self.backend.account.return_value = {'id': 27, 'user_id': 14, 'session': 'saved-session', 'auth_version': 0}
         self.assertTrue(await self.manager.start_account(27))
         self.assertFalse(await self.manager.start_account(27))
         self.assertEqual([27], self.manager.running_account_ids())

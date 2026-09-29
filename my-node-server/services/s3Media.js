@@ -4,6 +4,13 @@ const { randomUUID } = require('crypto');
 
 let client;
 
+async function readObject(media, range, signal) {
+  assertOwnedKey(media.s3_key, media.user_id, media.telegram_account_id);
+  const { bucket } = configuration();
+  return s3Client().send(new GetObjectCommand({ Bucket: bucket, Key: media.s3_key,
+    Range: range || undefined }), { abortSignal: signal });
+}
+
 function configuration() {
   const bucket = String(process.env.S3_BUCKET_NAME || '').trim();
   const region = String(process.env.AWS_REGION || '').trim();
@@ -117,6 +124,7 @@ async function storageTotals(userId, pdfKeys = new Set()) {
 }
 
 module.exports = {
+  readObject,
   storageTotals,
   assertOwnedKey,
   createAccessUrl,

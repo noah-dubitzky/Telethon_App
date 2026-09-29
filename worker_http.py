@@ -31,6 +31,9 @@ class BackendClient:
     async def eligible_accounts(self):
         return (await self._request("GET", "/accounts"))["accounts"]
 
+    async def eligibility(self):
+        return (await self._request("GET", "/eligibility"))["accounts"]
+
     async def account(self, account_id):
         return (await self._request("GET", f"/accounts/{account_id}"))["account"]
 
@@ -72,6 +75,12 @@ class ControlServer:
         stopped = await self.manager.stop_account(account_id)
         return web.json_response({"account_id": account_id, "running": False, "stopped": stopped})
 
+    async def pause_account(self, request):
+        account_id = int(request.match_info["account_id"])
+        # Same local stop as disconnect; saved credentials/settings are retained.
+        stopped = await self.manager.stop_account(account_id)
+        return web.json_response({"account_id": account_id, "running": False, "stopped": stopped})
+
     async def restart_account(self, request):
         account_id = int(request.match_info["account_id"])
         await self.manager.restart_account(account_id)
@@ -83,6 +92,7 @@ class ControlServer:
     async def start(self):
         app = web.Application(middlewares=[self.authenticate])
         app.add_routes([
+            web.post("/accounts/{account_id:\\d+}/pause", self.pause_account),
             web.post("/accounts/{account_id:\\d+}/start", self.start_account),
             web.post("/accounts/{account_id:\\d+}/stop", self.stop_account),
             web.post("/accounts/{account_id:\\d+}/restart", self.restart_account),

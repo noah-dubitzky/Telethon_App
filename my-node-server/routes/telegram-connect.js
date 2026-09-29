@@ -14,7 +14,9 @@ const PHONE_PATTERN = /^\+[1-9]\d{7,14}$/;
 router.use(requireAuth);
 
 function safeError(res, error) {
+  if (error.code === 'ACCOUNT_NOT_APPROVED') return res.status(403).json(require('../services/sessionValidity').NOT_APPROVED);
   const mappings = {
+    ACCOUNT_NOT_APPROVED: [403, 'Your Telesaver account has not been approved yet.'],
     PHONE_INVALID: [400, 'Invalid Telegram phone number'],
     PHONE_CODE_INVALID: [400, 'Invalid Telegram verification code'],
     PHONE_CODE_EXPIRED: [410, 'Telegram verification code expired'],
@@ -58,12 +60,15 @@ async function ownedAttempt(req, res) {
   return attempt;
 }
 
-async function finalizeConnection(userId, attempt, result) {
+async function finalizeConnection(userId, attempt, result, authVersion) {
   const encryptedSession = encryptSecret(result.session);
   const displayName = result.identity.display_name || result.identity.username || `Telegram ${result.identity.id}`;
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+    const [owners] = await connection.execute(
+      "SELECT id FROM users WHERE id = ? AND is_approved = TRUE AND status = 'active' AND auth_version = ? FOR UPDATE", [userId, authVersion]);
+    if (!owners[0]) throw Object.assign(new Error('Account not approved'), { code: 'ACCOUNT_NOT_APPROVED' });
     const [existing] = await connection.execute(
       `SELECT id, user_id FROM telegram_accounts WHERE telegram_user_id = ? LIMIT 1 FOR UPDATE`,
       [String(result.identity.id)]
@@ -162,7 +167,7 @@ router.post('/verify-code', telegramAuthRateLimit('code'), async (req, res) => {
       );
       return res.json({ attempt_id: attempt.id, status: 'password_required' });
     }
-    const account = await finalizeConnection(req.auth.userId, attempt, result);
+    const account = await finalizeConnection(req.auth.userId, attempt, result, req.session.authVersion);
     await startWorkerAccount(account);
     console.log(`Telegram account connected: user=${req.auth.userId} attempt=${attempt.id} account=${account.id}`);
     return res.json({ status: 'connected', account });
@@ -184,7 +189,7 @@ router.post('/verify-password', telegramAuthRateLimit('password'), async (req, r
       temporary_session: decryptSecret(attempt.temporary_session_ciphertext, attempt.session_key_version),
       password
     });
-    const account = await finalizeConnection(req.auth.userId, attempt, result);
+    const account = await finalizeConnection(req.auth.userId, attempt, result, req.session.authVersion);
     await startWorkerAccount(account);
     console.log(`Telegram account connected: user=${req.auth.userId} attempt=${attempt.id} account=${account.id}`);
     return res.json({ status: 'connected', account });

@@ -112,8 +112,8 @@ async function access(req, res, { redirect = false } = {}) {
     let storage;
     let expiresIn = null;
     if (media.s3_key) {
-      expiresIn = Math.min(Math.max(Number(process.env.S3_PRESIGN_SECONDS || 300), 60), 900);
-      url = await s3Media.createAccessUrl(media, { expiresIn });
+      if (redirect) return await require('../services/protectedStream').streamObject(req, res, media);
+      url = `/api/media/${encodeURIComponent(media.id)}/content`;
       storage = 's3';
     } else {
       url = legacyUrl(media.path);

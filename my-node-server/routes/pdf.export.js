@@ -98,6 +98,7 @@ router.get('/channel-pdf', async (req, res) => {
   let browser;
   let uploadedPdf;
   let persisted = false;
+  const guard = require('../services/protectedStream').watchTransfer(req, res, () => browser?.close());
 
   try {
     const entityId = String(req.query.id || '').trim();
@@ -375,6 +376,8 @@ router.get('/channel-pdf', async (req, res) => {
       }
     });
     const pdfBuffer = Buffer.from(pdfBytes);
+    guard.signal.throwIfAborted();
+    if (!await require('../services/sessionValidity').isSessionValid(req.session)) throw new Error('Account access revoked');
 
     if (pdfBuffer.subarray(0, 5).toString('ascii') !== '%PDF-') {
       throw new Error('The PDF renderer returned invalid document data.');
@@ -396,6 +399,11 @@ router.get('/channel-pdf', async (req, res) => {
         filename
       });
       await connection.beginTransaction();
+      const [owners] = await connection.execute(
+        "SELECT id FROM users WHERE id = ? AND is_approved = TRUE AND status = 'active' AND auth_version = ? FOR UPDATE",
+        [req.auth.userId, req.session.authVersion]);
+      if (!owners[0]) throw new Error('Account access revoked');
+      guard.signal.throwIfAborted();
       await savePdfExport(connection, {
         ...metadata,
         userId: req.auth.userId,
@@ -416,6 +424,8 @@ router.get('/channel-pdf', async (req, res) => {
     } finally {
       connection.release();
     }
+    guard.signal.throwIfAborted();
+    res.setHeader('Cache-Control', 'private, no-store');
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', getContentDisposition(filename));
     res.setHeader('Content-Length', pdfBuffer.length);
@@ -431,11 +441,12 @@ router.get('/channel-pdf', async (req, res) => {
       });
     }
     console.error('Error exporting channel PDF:', err);
-    res.status(500).json({
+    if (!res.destroyed && !res.headersSent) res.status(500).json({
       error: 'Unable to export channel PDF.',
       details: err.message
     });
   } finally {
+    guard.cleanup();
     if (browser) {
       await browser.close().catch(() => {});
     }

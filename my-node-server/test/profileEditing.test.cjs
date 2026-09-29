@@ -35,7 +35,7 @@ async function fixture(t) {
       if (q.startsWith('SELECT id FROM users WHERE email')) return [duplicate ? [{ id: 2 }] : []];
       if (q.includes('WHERE email =') && args[0] !== user.email) return [[]];
       if (q.includes('WHERE id =') && Number(args[0]) !== user.id) return [[]];
-      const safe = { id: user.id, email: user.email, display_name: user.display_name, status: user.status };
+      const safe = { id: user.id, email: user.email, display_name: user.display_name, status: user.status, is_approved: 1 };
       if (q.includes('password_hash')) safe.password_hash = user.password_hash;
       if (q.includes('auth_version')) safe.auth_version = user.auth_version;
       return [[safe]];

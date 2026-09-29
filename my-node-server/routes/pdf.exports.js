@@ -114,15 +114,11 @@ router.get('/:id/content', async (req, res) => {
       [exportId, req.auth.userId]
     );
     if (!rows[0]) return res.status(404).json({ error: 'PDF export not found' });
-    const expiresIn = Math.min(Math.max(Number(process.env.S3_PRESIGN_SECONDS || 300), 60), 900);
-    const url = await s3Media.createPdfExportAccessUrl({
-      storageKey: rows[0].storage_key,
-      userId: rows[0].user_id,
-      accountId: rows[0].telegram_account_id,
-      filename: rows[0].export_name
-    }, { expiresIn });
-    res.set('Cache-Control', 'private, no-store');
-    return res.redirect(302, url);
+    return await require('../services/protectedStream').streamObject(req, res, {
+      s3_key: rows[0].storage_key, user_id: rows[0].user_id,
+      telegram_account_id: rows[0].telegram_account_id,
+      original_filename: rows[0].export_name, mime_type: 'application/pdf'
+    });
   } catch (error) {
     console.error(`PDF export content failed: export=${exportId} user=${req.auth.userId} reason=${error.code || 'unknown'}`);
     return res.status(502).json({ error: 'Unable to retrieve PDF export content' });

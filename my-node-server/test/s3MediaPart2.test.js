@@ -115,7 +115,7 @@ test('saved PDF content and deletion remain authenticated and storage-backed', (
   const storage = read('services/s3Media.js');
   assert.match(route, /router\.get\('\/:id\/content'/);
   assert.match(route, /pe\.id = \? AND pe\.user_id = \?/);
-  assert.match(route, /createPdfExportAccessUrl/);
+  assert.match(route, /streamObject/);
   assert.match(route, /deletePdfExportObject[\s\S]*DELETE FROM pdf_exports/);
   assert.match(storage, /ResponseContentType: 'application\/pdf'/);
 });
