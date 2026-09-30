@@ -91,7 +91,12 @@ router.post('/login', async (req, res) => {
     if (!passwordMatches || user.status !== 'active') {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
-    if (Number(user.is_approved) !== 1) return res.status(403).json(NOT_APPROVED);
+    if (Number(user.is_approved) !== 1) {
+      return res.status(403).json({
+        ...NOT_APPROVED,
+        message: Number(user.auth_version) > 0 ? 'Your account has been revoked.' : NOT_APPROVED.message
+      });
+    }
 
     await regenerateSession(req);
     req.session.userId = user.id;

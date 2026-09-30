@@ -4,4 +4,5 @@ session_name.session
 .env
 s3-policy-before-approval-*.json
 __pycache__/
+my-node-server/env/
 my-node-server/public/uploads/[0-9]*/

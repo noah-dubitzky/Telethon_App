@@ -107,15 +107,15 @@
     return card;
   }
 
-  function addAccountCard() {
+  function addAccountCard(hasAccounts) {
     const classes = mobile
       ? 'min-h-52 rounded-2xl border-2 border-dashed border-slate-300 bg-white/60 hover:border-blue-500 hover:bg-blue-50 transition flex flex-col items-center justify-center p-6 text-center focus:outline-none focus:ring-2 focus:ring-blue-500'
       : 'min-h-72 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/30 hover:border-blue-500 hover:bg-blue-50 transition flex flex-col items-center justify-center p-6 text-center focus:outline-none focus:ring-4 focus:ring-blue-500/20';
     return $(`<a class="${classes}">`)
       .attr('href', '/settings.html')
       .append($(`<span class="${mobile ? 'text-4xl leading-none text-blue-600' : 'flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-4xl font-light leading-none text-blue-600'}" aria-hidden="true">`).text('+'))
-      .append($(`<span class="${mobile ? 'mt-3 text-lg font-bold text-slate-800' : 'mt-5 text-lg font-bold text-blue-700'}">`).text('Add another account'))
-      .append($('<span class="mt-1 text-sm text-slate-500">').text('Connect another Telegram account'));
+      .append($(`<span class="${mobile ? 'mt-3 text-lg font-bold text-slate-800' : 'mt-5 text-lg font-bold text-blue-700'}">`).text(hasAccounts ? 'Add another account' : 'Add account'))
+      .append($('<span class="mt-1 text-sm text-slate-500">').text(hasAccounts ? 'Connect another Telegram account' : 'Connect your first Telegram account'));
   }
 
   function bindAccountSearch() {
@@ -215,7 +215,7 @@
         }
 
         // Keep account creation in the same visual hierarchy as account cards.
-        grid.append(addAccountCard());
+        grid.append(addAccountCard(data.accounts.length > 0));
         bindAccountSearch();
       })
       .fail(function (xhr) {
