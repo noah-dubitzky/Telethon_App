@@ -5,4 +5,7 @@ session_name.session
 s3-policy-before-approval-*.json
 __pycache__/
 my-node-server/env/
-my-node-server/public/uploads/[0-9]*/
+my-node-server/public/uploads/
+my-node-server/uploads/
+*.log
+conversations_with_media.xlsx
