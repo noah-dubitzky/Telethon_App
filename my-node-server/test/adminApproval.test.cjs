@@ -54,6 +54,7 @@ async function fixture(t) {
     './telegramWorkerClient': { controlAccount: async (action, id) => { stopped.push([action, id]); if (workerOffline) throw new Error('offline'); } },
     './protectedStream': { cancelUserTransfers: id => cancelled.push(String(id)) }
   });
+  const signup = require('./signupFixture.cjs')(execute);
   const app = express(); app.use(express.json());
   app.locals.realtime = { disconnectUser: async id => disconnected.push(String(id)) };
   const adminSession = session({ name: 'admin', secret: 'test-admin-session-secret', resave: false, saveUninitialized: false, cookie: { path: '/api/admin' } });
@@ -63,7 +64,7 @@ async function fixture(t) {
     '../middleware/adminRateLimit': load('middleware/adminRateLimit.js', { '../public/scripts/db': pool })
   }));
   app.use(session({ name: 'user', secret: 'test-user-session-secret', resave: false, saveUninitialized: false }));
-  app.use('/api/auth', load('routes/auth.js', { '../public/scripts/db': pool, '../middleware/requireAuth': requireAuth, '../services/sessionValidity': validity }));
+  app.use('/api/auth', load('routes/auth.js', { './signup': signup.router, '../public/scripts/db': pool, '../middleware/requireAuth': requireAuth, '../services/sessionValidity': validity }));
   app.get('/probe', requireAuth, (_req, res) => res.json({ ok: true }));
   const base = await listen(t, app);
   function client() {
@@ -79,7 +80,7 @@ async function fixture(t) {
       }
     };
   }
-  return { users, admin, client, validity, stopped, disconnected, cancelled,
+  return { signup, users, admin, client, validity, stopped, disconnected, cancelled,
     offline: value => { offline = value; }, workerOffline: value => { workerOffline = value; } };
 }
 async function adminLogin(f) {
@@ -92,7 +93,8 @@ const credentials = { email: 'user@example.com', password: 'user-password-123' }
 
 test('registration, admin approval, multiple-session revocation, and fresh login after reapproval', async t => {
   const f = await fixture(t); const user = f.client();
-  const registered = await user.request('/api/auth/register', { ...credentials, is_approved: true, isApproved: true });
+  const requested = await user.request('/api/auth/signup/request-code', credentials);
+  const registered = await user.request('/api/auth/register', { signupId: requested.data.signupId, code: f.signup.messages.at(-1).code, is_approved: true });
   assert.equal(registered.status, 201); assert.equal(registered.cookie, null);
   assert.equal(f.users.get(1).is_approved, 0); assert.equal(registered.data.user.password_hash, undefined);
   assert.equal((await user.request('/probe')).status, 401);
@@ -142,7 +144,8 @@ test('admin CSRF, strict inputs, rate limits, logout and credential reset', asyn
 
 test('DB failure fails closed and failed worker notification does not restore approval', async t => {
   const f = await fixture(t); const user = f.client();
-  await user.request('/api/auth/register', credentials);
+  const requested = await user.request('/api/auth/signup/request-code', credentials);
+  await user.request('/api/auth/signup/verify', { signupId: requested.data.signupId, code: f.signup.messages.at(-1).code });
   const admin = await adminLogin(f);
   await admin.request('/api/admin/users/1/approval', { isApproved: true }, 'PATCH');
   await user.request('/api/auth/login', credentials);

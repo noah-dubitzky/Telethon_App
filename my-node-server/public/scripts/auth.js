@@ -99,39 +99,72 @@
         });
     });
 
-    $('#signupForm').on('submit', function (event) {
+    const signup = $('#signupForm');
+    let signupId = null;
+    let busy = false;
+    let resendAt = 0;
+    function renderSignup() {
+      signup.find('[name=email], [name=password], [name=confirmation]').prop('disabled', busy || Boolean(signupId));
+      signup.find('[name=code]').prop('disabled', busy || !signupId).prop('required', Boolean(signupId));
+      signup.attr('aria-busy', String(busy));
+      $('#signupVerification').prop('hidden', !signupId).toggleClass('hidden', !signupId);
+      $('#signupDetails').prop('hidden', Boolean(signupId)).toggleClass('hidden', Boolean(signupId));
+      $('#sendSignupCode').attr('type', signupId ? 'button' : 'submit').prop('disabled', busy || Boolean(signupId)).text(busy ? 'Sending code...' : 'Send verification code');
+      $('#createSignupAccount').prop('disabled', busy || !signupId).text(busy ? 'Please wait...' : 'Create account');
+      const seconds = Math.max(0, Math.ceil((resendAt - Date.now()) / 1000));
+      $('#resendSignupCode').prop('disabled', busy || seconds > 0).text(seconds ? `Resend code (${seconds}s)` : 'Resend code');
+      $('#editSignupDetails').prop('disabled', busy);
+    }
+    setInterval(renderSignup, 1000);
+    $('#editSignupDetails').on('click', function () {
+      signupRequest('/api/auth/signup/cancel', { signupId }, function () {
+        signupId = null;
+        resendAt = 0;
+        signup[0].reset();
+        signup.find('[name=password]').attr('placeholder', 'Create a password');
+        signup.find('[name=confirmation]').attr('placeholder', 'Repeat your password');
+        $('#authMessage').addClass('hidden');
+      });
+    });
+    function signupRequest(url, data, success) {
+      busy = true;
+      renderSignup();
+      $.ajax({ url, method: 'POST', contentType: 'application/json', data: JSON.stringify(data) })
+        .done(success)
+        .fail(xhr => message(errorMessage(xhr, 'Unable to complete signup.')))
+        .always(function () { busy = false; renderSignup(); if (signupId) signup.find('[name=code]').trigger('focus'); else signup.find('[name=email]').trigger('focus'); });
+    }
+    $('#resendSignupCode').on('click', function () {
+      if (busy || Date.now() < resendAt) return;
+      signupRequest('/api/auth/signup/resend-code', { signupId }, function (data) {
+        resendAt = Date.now() + data.resendAfter * 1000;
+        signup.find('[name=code]').val('');
+        message('A new verification code has been sent. Use the latest code.', false);
+      });
+    });
+    signup.on('submit', function (event) {
       event.preventDefault();
-
-      const form = $(this);
-      const password = form[0].password.value;
-      const confirmation = form[0].confirmation.value;
-
-      if (password !== confirmation) {
+      if (busy) return;
+      if (signupId) {
+        signupRequest('/api/auth/signup/verify', { signupId, code: signup[0].code.value }, function () {
+          signupId = null;
+          signup[0].reset();
+          showForm('login');
+          message('Your account has been created and is awaiting administrator approval.', false);
+        });
+        return;
+      }
+      if (signup[0].password.value !== signup[0].confirmation.value) {
         message('Passwords do not match.');
         return;
       }
-
-      pending(form, true, 'Creating account…');
-
-      $.ajax({
-        url: '/api/auth/register',
-        method: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-          email: form[0].email.value,
-          password
-        })
-      })
-        .done(function () {
-          showForm('login');
-          message('Your account has been created and is awaiting administrator approval.', false);
-        })
-        .fail(function (xhr) {
-          message(errorMessage(xhr, 'Unable to create account.'));
-        })
-        .always(function () {
-          pending(form, false);
-        });
+      signupRequest('/api/auth/signup/request-code', { email: signup[0].email.value, password: signup[0].password.value }, function (data) {
+        signupId = data.signupId;
+        resendAt = Date.now() + data.resendAfter * 1000;
+        signup.find('[name=password], [name=confirmation]').val('');
+        message('Check your email and enter the six-digit code below. It expires in 10 minutes.', false);
+      });
     });
+    renderSignup();
   });
 })(jQuery);

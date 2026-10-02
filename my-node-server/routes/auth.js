@@ -39,36 +39,7 @@ function saveSession(req) {
   )));
 }
 
-router.post('/register', async (req, res) => {
-  const email = normalizeEmail(req.body && req.body.email);
-  const password = req.body && req.body.password;
-  const validationError = validateCredentialsInput(email, password, true);
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
-  }
-
-  try {
-    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const [result] = await pool.execute(
-      `INSERT INTO users (email, password_hash, status, is_approved)
-       VALUES (?, ?, 'active', FALSE)`,
-      [email, passwordHash]
-    );
-    const [users] = await pool.execute(
-      `SELECT ${SAFE_USER_COLUMNS} FROM users WHERE id = ? LIMIT 1`,
-      [result.insertId]
-    );
-
-    return res.status(201).json({ user: users[0], approval_pending: true,
-      message: 'Your account has been created and is awaiting administrator approval.' });
-  } catch (error) {
-    if (error && error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'An account with that email already exists' });
-    }
-    console.error('Registration failed:', error && error.code ? error.code : 'unknown error');
-    return res.status(500).json({ error: 'Unable to create account' });
-  }
-});
+router.use(require('./signup'));
 
 router.post('/login', async (req, res) => {
   const email = normalizeEmail(req.body && req.body.email);
